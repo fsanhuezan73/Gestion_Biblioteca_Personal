@@ -1,11 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, status
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, Query, status
+from typing import List, Optional
 
 import oracledb
 
 from app.db.session import get_db_connection
 from app.core.security import get_current_user
-from app.schemas.book import BookCreate, BookUpdate, BookOut
+from app.schemas.book import BookCreate, BookUpdate, BookOut, VALID_READING_STATUSES
 
 router = APIRouter(prefix="/books", tags=["Libros"])
 
@@ -46,7 +46,9 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
                b.year,
                g.name   AS genre,
                p.name   AS publisher,
-               b.created_at
+               b.created_at,
+               b.cover_url,
+               b.reading_status
         FROM books b
         LEFT JOIN genres     g ON g.id = b.genre_id
         LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -77,6 +79,8 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
         genre=row[4],
         publisher=row[5],
         created_at=row[6],
+        cover_url=row[7],
+        reading_status=row[8],
         authors=authors,
     )
 
@@ -90,27 +94,65 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
     response_model=List[BookOut],
     summary="Listar todos los libros del usuario",
 )
-def list_books(current_user_id: int = Depends(get_current_user)):
-    """HU-02: Retorna todos los libros activos del usuario autenticado."""
+def list_books(
+    current_user_id: int = Depends(get_current_user),
+    search: Optional[str] = Query(None, description="Búsqueda libre en título, autor, ISBN, año, género"),
+    genre: Optional[str] = Query(None, description="Filtrar por género exacto"),
+    reading_status: Optional[str] = Query(None, description="Filtrar por estado de lectura"),
+):
+    """HU-02 + HU-05: Retorna libros activos del usuario con búsqueda y filtros."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+
+        # Base query
+        sql = """
             SELECT b.id,
                    b.title,
                    b.isbn,
                    b.year,
                    g.name   AS genre,
                    p.name   AS publisher,
-                   b.created_at
+                   b.created_at,
+                   b.cover_url,
+                   b.reading_status
             FROM books b
             LEFT JOIN genres     g ON g.id = b.genre_id
             LEFT JOIN publishers p ON p.id = b.publisher_id
             WHERE b.user_id = :user_id AND b.deleted_at IS NULL
-            ORDER BY b.created_at DESC
-            """,
-            {"user_id": current_user_id},
-        )
+        """
+        bind = {"user_id": current_user_id}
+
+        # Filtro por género exacto
+        if genre:
+            sql += " AND LOWER(g.name) = LOWER(:genre)"
+            bind["genre"] = genre
+
+        # Filtro por estado de lectura exacto
+        if reading_status:
+            sql += " AND b.reading_status = :reading_status"
+            bind["reading_status"] = reading_status
+
+        # Búsqueda libre: coincidencia parcial en título, autor, ISBN, año, género
+        if search:
+            sql += """
+                AND (
+                    LOWER(b.title) LIKE '%' || LOWER(:search) || '%'
+                    OR LOWER(b.isbn) LIKE '%' || LOWER(:search) || '%'
+                    OR TO_CHAR(b.year) LIKE '%' || :search || '%'
+                    OR LOWER(g.name) LIKE '%' || LOWER(:search) || '%'
+                    OR EXISTS (
+                        SELECT 1 FROM book_authors ba2
+                        JOIN authors a2 ON a2.id = ba2.author_id
+                        WHERE ba2.book_id = b.id
+                        AND LOWER(a2.name) LIKE '%' || LOWER(:search) || '%'
+                    )
+                )
+            """
+            bind["search"] = search
+
+        sql += " ORDER BY b.created_at DESC"
+
+        cursor.execute(sql, bind)
         rows = cursor.fetchall()
 
         result = []
@@ -126,7 +168,8 @@ def list_books(current_user_id: int = Depends(get_current_user)):
             authors = [x[0] for x in cursor.fetchall()]
             result.append(BookOut(
                 id=r[0], title=r[1], isbn=r[2], year=r[3],
-                genre=r[4], publisher=r[5], created_at=r[6], authors=authors,
+                genre=r[4], publisher=r[5], created_at=r[6], cover_url=r[7],
+                reading_status=r[8], authors=authors,
             ))
     return result
 
@@ -162,8 +205,8 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
 
         cursor.execute(
             """
-            INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at)
-            VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP)
+            INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at, cover_url, reading_status)
+            VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP, :cover_url, :reading_status)
             """,
             {
                 "user_id": current_user_id,
@@ -172,6 +215,8 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
                 "pub_year": book_in.year,
                 "genre_id": genre_id,
                 "publisher_id": publisher_id,
+                "cover_url": book_in.cover_url,
+                "reading_status": book_in.reading_status or "Quiero leer",
             },
         )
         cursor.execute(
@@ -189,6 +234,28 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
         book = _fetch_book_row(cursor, book_id)
 
     return book
+
+
+@router.get(
+    "/genres",
+    response_model=List[str],
+    summary="Listar géneros usados por el usuario",
+)
+def list_genres(current_user_id: int = Depends(get_current_user)):
+    """HU-05: Retorna los nombres de géneros que el usuario tiene asignados a sus libros."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT DISTINCT g.name
+            FROM genres g
+            JOIN books b ON b.genre_id = g.id
+            WHERE b.user_id = :user_id AND b.deleted_at IS NULL
+            ORDER BY g.name
+            """,
+            {"user_id": current_user_id},
+        )
+        return [r[0] for r in cursor.fetchall()]
 
 
 @router.get(
@@ -260,7 +327,7 @@ def update_book(
         # las operaciones FK (book_authors). Previene ORA-12860.
         conn.commit()
 
-        scalar_map = {"title": "title", "isbn": "isbn", "year": "pub_year"}
+        scalar_map = {"title": "title", "isbn": "isbn", "year": "pub_year", "cover_url": "cover_url", "reading_status": "reading_status"}
         set_parts = []
         bind_params = {"bid": book_id}
 
@@ -308,6 +375,40 @@ def update_book(
 
         book = _fetch_book_row(cursor, book_id)
 
+    return book
+
+
+@router.patch(
+    "/{book_id}/status",
+    response_model=BookOut,
+    summary="Cambiar estado de lectura de un libro",
+)
+def update_reading_status(
+    book_id: int,
+    body: dict,
+    current_user_id: int = Depends(get_current_user),
+):
+    """HU-06: Actualiza rápidamente el estado de lectura de un libro."""
+    new_status = body.get("reading_status")
+    if new_status not in VALID_READING_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Estado inválido. Valores permitidos: {', '.join(VALID_READING_STATUSES)}",
+        )
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id FROM books WHERE id = :bid AND user_id = :user_id AND deleted_at IS NULL",
+            {"bid": book_id, "user_id": current_user_id},
+        )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Libro no encontrado")
+        cursor.execute(
+            "UPDATE books SET reading_status = :status WHERE id = :bid",
+            {"status": new_status, "bid": book_id},
+        )
+        book = _fetch_book_row(cursor, book_id)
     return book
 
 

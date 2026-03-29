@@ -8,16 +8,38 @@
 
     <div v-else-if="book" class="card shadow-sm">
       <div class="card-body p-4">
-        <!-- Portada placeholder -->
+        <!-- Portada -->
         <div
-          class="d-flex align-items-center justify-content-center bg-light rounded mb-4"
+          class="d-flex align-items-center justify-content-center bg-light rounded mb-4 overflow-hidden"
           style="height: 200px"
         >
-          <span style="font-size: 5rem">📖</span>
+          <img
+            v-if="book.cover_url"
+            :src="book.cover_url"
+            :alt="book.title"
+            style="max-height: 100%; max-width: 100%; object-fit: contain"
+          />
+          <span v-else style="font-size: 5rem">📖</span>
         </div>
 
         <h2 class="fw-bold mb-1">{{ book.title }}</h2>
         <p class="text-muted fs-5 mb-3">{{ book.authors?.join(', ') }}</p>
+
+        <!-- Estado de lectura -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold small text-uppercase text-muted">Estado de lectura</label>
+          <select
+            class="form-select"
+            style="max-width: 220px"
+            :value="book.reading_status || 'Quiero leer'"
+            :disabled="statusUpdating"
+            @change="handleStatusChange($event.target.value)"
+          >
+            <option value="Quiero leer">📘 Quiero leer</option>
+            <option value="Leyendo">📖 Leyendo</option>
+            <option value="Leído">✅ Leído</option>
+          </select>
+        </div>
 
         <ul class="list-group list-group-flush mb-4">
           <li v-if="book.publisher" class="list-group-item px-0">
@@ -72,6 +94,7 @@ const book = ref(null)
 const loading = ref(true)
 const showModal = ref(false)
 const deleteLoading = ref(false)
+const statusUpdating = ref(false)
 
 onMounted(async () => {
   try {
@@ -82,6 +105,15 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function handleStatusChange(newStatus) {
+  statusUpdating.value = true
+  try {
+    book.value = await booksStore.updateReadingStatus(book.value.id, newStatus)
+  } finally {
+    statusUpdating.value = false
+  }
+}
 
 async function handleDelete() {
   deleteLoading.value = true

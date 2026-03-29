@@ -42,16 +42,50 @@
       </button>
     </div>
 
-    <!-- ISBN -->
+    <!-- ISBN + búsqueda automática -->
     <div class="mb-3">
       <label for="isbn" class="form-label">ISBN</label>
-      <input
-        id="isbn"
-        v-model="form.isbn"
-        type="text"
-        class="form-control"
-        placeholder="Ej: 978-84-450-7747-2"
+      <div class="input-group">
+        <input
+          id="isbn"
+          v-model="form.isbn"
+          type="text"
+          class="form-control"
+          placeholder="Ej: 978-84-450-7747-2"
+        />
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          :disabled="isbnSearching || !form.isbn?.trim()"
+          @click="searchByISBN"
+        >
+          <span v-if="isbnSearching" class="spinner-border spinner-border-sm" role="status" />
+          <span v-else>Buscar</span>
+        </button>
+      </div>
+      <div
+        v-if="isbnAlert"
+        class="alert mt-2 py-2 small mb-0"
+        :class="`alert-${isbnAlert.type}`"
+        role="alert"
+      >
+        {{ isbnAlert.text }}
+      </div>
+    </div>
+
+    <!-- Portada autocomplete preview -->
+    <div v-if="form.cover_url" class="mb-3 text-center">
+      <img
+        :src="form.cover_url"
+        alt="Portada del libro"
+        class="rounded shadow-sm"
+        style="max-height: 160px; object-fit: contain"
       />
+      <div class="mt-1">
+        <button type="button" class="btn btn-link btn-sm text-danger p-0" @click="form.cover_url = ''">
+          Quitar portada
+        </button>
+      </div>
     </div>
 
     <!-- Editorial -->
@@ -66,9 +100,9 @@
       />
     </div>
 
-    <!-- Año y Género en fila -->
+    <!-- Año, Género y Estado en fila -->
     <div class="row g-3 mb-4">
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="year" class="form-label">Año de publicación</label>
         <input
           id="year"
@@ -80,7 +114,7 @@
           max="2100"
         />
       </div>
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="genre" class="form-label">Género</label>
         <select id="genre" v-model="form.genre" class="form-select">
           <option value="">— Seleccionar —</option>
@@ -96,6 +130,14 @@
           <option>Otro</option>
         </select>
       </div>
+      <div class="col-sm-4">
+        <label for="reading_status" class="form-label">Estado de lectura</label>
+        <select id="reading_status" v-model="form.reading_status" class="form-select">
+          <option value="Quiero leer">📘 Quiero leer</option>
+          <option value="Leyendo">📖 Leyendo</option>
+          <option value="Leído">✅ Leído</option>
+        </select>
+      </div>
     </div>
 
     <div v-if="apiError" class="alert alert-danger py-2" role="alert">{{ apiError }}</div>
@@ -108,7 +150,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -126,9 +168,13 @@ const form = reactive({
   publisher: '',
   year: null,
   genre: '',
+  cover_url: '',
+  reading_status: 'Quiero leer',
 })
 
 const errors = reactive({ title: '', authors: '' })
+const isbnSearching = ref(false)
+const isbnAlert = ref(null)
 
 watch(
   () => props.initialData,
@@ -140,6 +186,8 @@ watch(
       form.publisher = data.publisher ?? ''
       form.year = data.year ?? null
       form.genre = data.genre ?? ''
+      form.cover_url = data.cover_url ?? ''
+      form.reading_status = data.reading_status ?? 'Quiero leer'
     }
   },
   { immediate: true }
@@ -151,6 +199,90 @@ function addAuthor() {
 
 function removeAuthor(idx) {
   form.authors.splice(idx, 1)
+}
+
+async function searchByISBN() {
+  if (!form.isbn?.trim()) return
+  isbnSearching.value = true
+  isbnAlert.value = null
+  try {
+    const isbn = form.isbn.trim().replace(/[-\s]/g, '')
+
+    // 1) Buscar en Open Library search (trae todo en 1 llamada cuando está completo)
+    const res = await fetch(
+      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&fields=title,author_name,publisher,first_publish_year,cover_i&limit=1`
+    )
+    if (!res.ok) {
+      isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
+      return
+    }
+    const data = await res.json()
+    if (!data.docs?.length) {
+      isbnAlert.value = { type: 'warning', text: 'Libro no encontrado. Por favor, ingresa los datos manualmente.' }
+      return
+    }
+    const doc = data.docs[0]
+    if (doc.title) form.title = doc.title
+    if (doc.author_name?.length) form.authors = [...doc.author_name]
+    if (doc.publisher?.length) form.publisher = doc.publisher[0]
+    if (doc.first_publish_year) form.year = doc.first_publish_year
+    if (doc.cover_i) {
+      form.cover_url = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
+    }
+
+    // 2) Fallback autores: si search no trajo author_name, resolver via edition → works → authors
+    if (!doc.author_name?.length) {
+      try {
+        const edRes = await fetch(`https://openlibrary.org/isbn/${isbn}.json`)
+        if (edRes.ok) {
+          const edition = await edRes.json()
+          // Intentar authors directos de la edición
+          if (edition.authors?.length) {
+            const names = await Promise.all(
+              edition.authors.map(async (a) => {
+                const r = await fetch(`https://openlibrary.org${a.key}.json`)
+                if (r.ok) { const d = await r.json(); return d.name }
+                return null
+              })
+            )
+            const valid = names.filter(Boolean)
+            if (valid.length) form.authors = valid
+          }
+          // Si aún no hay autores, intentar via works
+          if (form.authors.length === 1 && !form.authors[0] && edition.works?.length) {
+            const wRes = await fetch(`https://openlibrary.org${edition.works[0].key}.json`)
+            if (wRes.ok) {
+              const work = await wRes.json()
+              if (work.authors?.length) {
+                const names = await Promise.all(
+                  work.authors.map(async (a) => {
+                    const key = a.author?.key || a.key
+                    if (!key) return null
+                    const r = await fetch(`https://openlibrary.org${key}.json`)
+                    if (r.ok) { const d = await r.json(); return d.name }
+                    return null
+                  })
+                )
+                const valid = names.filter(Boolean)
+                if (valid.length) form.authors = valid
+              }
+            }
+          }
+        }
+      } catch { /* fallback silencioso — el usuario puede ingresar el autor manualmente */ }
+    }
+
+    const hasAuthor = form.authors.some((a) => a.trim())
+    if (!hasAuthor) {
+      isbnAlert.value = { type: 'info', text: 'Datos parcialmente completados. No se encontró el autor — ingrésalo manualmente.' }
+    } else {
+      isbnAlert.value = { type: 'success', text: 'Datos completados automáticamente. Revisa y guarda cuando estés listo.' }
+    }
+  } catch {
+    isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
+  } finally {
+    isbnSearching.value = false
+  }
 }
 
 function validate() {
@@ -172,6 +304,8 @@ function handleSubmit() {
     publisher: form.publisher || null,
     year: form.year || null,
     genre: form.genre || null,
+    cover_url: form.cover_url || null,
+    reading_status: form.reading_status || 'Quiero leer',
   })
 }
 </script>
