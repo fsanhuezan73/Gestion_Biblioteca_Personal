@@ -15,6 +15,14 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 
+# === Oracle Wallet (nunca subir al repo) ===
+wallet/
+*.sso
+*.p12
+*.pem
+ojdbc.properties
+*.jks
+
 # === OS / IDE ===
 .DS_Store
 **/.DS_Store

@@ -11,6 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true, // Escucha en 0.0.0.0 — necesario para Codespaces y Docker
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
