@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -196,21 +196,26 @@ async function searchByISBN() {
   isbnSearching.value = true
   isbnAlert.value = null
   try {
+    const isbn = form.isbn.trim().replace(/[-\s]/g, '')
     const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(form.isbn.trim())}`
+      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&fields=title,author_name,publisher,first_publish_year,cover_i&limit=1`
     )
+    if (!res.ok) {
+      isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
+      return
+    }
     const data = await res.json()
-    if (!data.items?.length) {
+    if (!data.docs?.length) {
       isbnAlert.value = { type: 'warning', text: 'Libro no encontrado. Por favor, ingresa los datos manualmente.' }
       return
     }
-    const info = data.items[0].volumeInfo
-    if (info.title) form.title = info.title
-    if (info.authors?.length) form.authors = [...info.authors]
-    if (info.publisher) form.publisher = info.publisher
-    if (info.publishedDate) form.year = parseInt(info.publishedDate.substring(0, 4)) || form.year
-    if (info.imageLinks?.thumbnail) {
-      form.cover_url = info.imageLinks.thumbnail.replace('http://', 'https://')
+    const doc = data.docs[0]
+    if (doc.title) form.title = doc.title
+    if (doc.author_name?.length) form.authors = [...doc.author_name]
+    if (doc.publisher?.length) form.publisher = doc.publisher[0]
+    if (doc.first_publish_year) form.year = doc.first_publish_year
+    if (doc.cover_i) {
+      form.cover_url = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
     }
     isbnAlert.value = { type: 'success', text: 'Datos completados automáticamente. Revisa y guarda cuando estés listo.' }
   } catch {
