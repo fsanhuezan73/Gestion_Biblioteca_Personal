@@ -100,9 +100,9 @@
       />
     </div>
 
-    <!-- Año y Género en fila -->
+    <!-- Año, Género y Estado en fila -->
     <div class="row g-3 mb-4">
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="year" class="form-label">Año de publicación</label>
         <input
           id="year"
@@ -114,7 +114,7 @@
           max="2100"
         />
       </div>
-      <div class="col-sm-6">
+      <div class="col-sm-4">
         <label for="genre" class="form-label">Género</label>
         <select id="genre" v-model="form.genre" class="form-select">
           <option value="">— Seleccionar —</option>
@@ -128,6 +128,14 @@
           <option>Poesía</option>
           <option>Ensayo</option>
           <option>Otro</option>
+        </select>
+      </div>
+      <div class="col-sm-4">
+        <label for="reading_status" class="form-label">Estado de lectura</label>
+        <select id="reading_status" v-model="form.reading_status" class="form-select">
+          <option value="Quiero leer">📘 Quiero leer</option>
+          <option value="Leyendo">📖 Leyendo</option>
+          <option value="Leído">✅ Leído</option>
         </select>
       </div>
     </div>
@@ -161,6 +169,7 @@ const form = reactive({
   year: null,
   genre: '',
   cover_url: '',
+  reading_status: 'Quiero leer',
 })
 
 const errors = reactive({ title: '', authors: '' })
@@ -178,6 +187,7 @@ watch(
       form.year = data.year ?? null
       form.genre = data.genre ?? ''
       form.cover_url = data.cover_url ?? ''
+      form.reading_status = data.reading_status ?? 'Quiero leer'
     }
   },
   { immediate: true }
@@ -295,6 +305,7 @@ function handleSubmit() {
     year: form.year || null,
     genre: form.genre || null,
     cover_url: form.cover_url || null,
+    reading_status: form.reading_status || 'Quiero leer',
   })
 }
 </script>

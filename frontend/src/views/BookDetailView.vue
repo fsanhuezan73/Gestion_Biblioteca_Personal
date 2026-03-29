@@ -25,6 +25,22 @@
         <h2 class="fw-bold mb-1">{{ book.title }}</h2>
         <p class="text-muted fs-5 mb-3">{{ book.authors?.join(', ') }}</p>
 
+        <!-- Estado de lectura -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold small text-uppercase text-muted">Estado de lectura</label>
+          <select
+            class="form-select"
+            style="max-width: 220px"
+            :value="book.reading_status || 'Quiero leer'"
+            :disabled="statusUpdating"
+            @change="handleStatusChange($event.target.value)"
+          >
+            <option value="Quiero leer">📘 Quiero leer</option>
+            <option value="Leyendo">📖 Leyendo</option>
+            <option value="Leído">✅ Leído</option>
+          </select>
+        </div>
+
         <ul class="list-group list-group-flush mb-4">
           <li v-if="book.publisher" class="list-group-item px-0">
             <strong>Editorial:</strong> {{ book.publisher }}
@@ -78,6 +94,7 @@ const book = ref(null)
 const loading = ref(true)
 const showModal = ref(false)
 const deleteLoading = ref(false)
+const statusUpdating = ref(false)
 
 onMounted(async () => {
   try {
@@ -88,6 +105,15 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function handleStatusChange(newStatus) {
+  statusUpdating.value = true
+  try {
+    book.value = await booksStore.updateReadingStatus(book.value.id, newStatus)
+  } finally {
+    statusUpdating.value = false
+  }
+}
 
 async function handleDelete() {
   deleteLoading.value = true
