@@ -95,10 +95,35 @@
       </button>
     </div>
 
-    <!-- Grid de libros -->
-    <div v-else class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-      <div v-for="book in booksStore.books" :key="book.id" class="col">
-        <BookCard :book="book" />
+    <!-- Toggle vista + Grid/Tabla de libros -->
+    <div v-else>
+      <div class="d-flex justify-content-end mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Cambiar vista">
+          <button
+            type="button"
+            class="btn"
+            :class="viewMode === 'grid' ? 'btn-primary' : 'btn-outline-primary'"
+            title="Vista cuadrícula"
+            @click="viewMode = 'grid'"
+          >☷ Cuadrícula</button>
+          <button
+            type="button"
+            class="btn"
+            :class="viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'"
+            title="Vista tabla"
+            @click="viewMode = 'table'"
+          >☰ Tabla</button>
+        </div>
+      </div>
+
+      <div v-if="viewMode === 'grid'" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div v-for="book in booksStore.books" :key="book.id" class="col">
+          <BookCard :book="book" />
+        </div>
+      </div>
+
+      <div v-else class="card shadow-sm">
+        <BookTable :books="booksStore.books" />
       </div>
     </div>
   </div>
@@ -110,6 +135,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBooksStore } from '@/stores/books'
 import BookCard from '@/components/BookCard.vue'
+import BookTable from '@/components/BookTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
 const router = useRouter()
@@ -122,6 +148,7 @@ const searchQuery = ref('')
 const filterGenre = ref('')
 const filterStatus = ref('')
 const showFilters = ref(false)
+const viewMode = ref('grid')
 
 let searchTimeout = null
 
