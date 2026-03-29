@@ -42,16 +42,50 @@
       </button>
     </div>
 
-    <!-- ISBN -->
+    <!-- ISBN + búsqueda automática -->
     <div class="mb-3">
       <label for="isbn" class="form-label">ISBN</label>
-      <input
-        id="isbn"
-        v-model="form.isbn"
-        type="text"
-        class="form-control"
-        placeholder="Ej: 978-84-450-7747-2"
+      <div class="input-group">
+        <input
+          id="isbn"
+          v-model="form.isbn"
+          type="text"
+          class="form-control"
+          placeholder="Ej: 978-84-450-7747-2"
+        />
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          :disabled="isbnSearching || !form.isbn?.trim()"
+          @click="searchByISBN"
+        >
+          <span v-if="isbnSearching" class="spinner-border spinner-border-sm" role="status" />
+          <span v-else>Buscar</span>
+        </button>
+      </div>
+      <div
+        v-if="isbnAlert"
+        class="alert mt-2 py-2 small mb-0"
+        :class="`alert-${isbnAlert.type}`"
+        role="alert"
+      >
+        {{ isbnAlert.text }}
+      </div>
+    </div>
+
+    <!-- Portada autocomplete preview -->
+    <div v-if="form.cover_url" class="mb-3 text-center">
+      <img
+        :src="form.cover_url"
+        alt="Portada del libro"
+        class="rounded shadow-sm"
+        style="max-height: 160px; object-fit: contain"
       />
+      <div class="mt-1">
+        <button type="button" class="btn btn-link btn-sm text-danger p-0" @click="form.cover_url = ''">
+          Quitar portada
+        </button>
+      </div>
     </div>
 
     <!-- Editorial -->
@@ -126,9 +160,12 @@ const form = reactive({
   publisher: '',
   year: null,
   genre: '',
+  cover_url: '',
 })
 
 const errors = reactive({ title: '', authors: '' })
+const isbnSearching = ref(false)
+const isbnAlert = ref(null)
 
 watch(
   () => props.initialData,
@@ -140,6 +177,7 @@ watch(
       form.publisher = data.publisher ?? ''
       form.year = data.year ?? null
       form.genre = data.genre ?? ''
+      form.cover_url = data.cover_url ?? ''
     }
   },
   { immediate: true }
@@ -151,6 +189,35 @@ function addAuthor() {
 
 function removeAuthor(idx) {
   form.authors.splice(idx, 1)
+}
+
+async function searchByISBN() {
+  if (!form.isbn?.trim()) return
+  isbnSearching.value = true
+  isbnAlert.value = null
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(form.isbn.trim())}`
+    )
+    const data = await res.json()
+    if (!data.items?.length) {
+      isbnAlert.value = { type: 'warning', text: 'Libro no encontrado. Por favor, ingresa los datos manualmente.' }
+      return
+    }
+    const info = data.items[0].volumeInfo
+    if (info.title) form.title = info.title
+    if (info.authors?.length) form.authors = [...info.authors]
+    if (info.publisher) form.publisher = info.publisher
+    if (info.publishedDate) form.year = parseInt(info.publishedDate.substring(0, 4)) || form.year
+    if (info.imageLinks?.thumbnail) {
+      form.cover_url = info.imageLinks.thumbnail.replace('http://', 'https://')
+    }
+    isbnAlert.value = { type: 'success', text: 'Datos completados automáticamente. Revisa y guarda cuando estés listo.' }
+  } catch {
+    isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
+  } finally {
+    isbnSearching.value = false
+  }
 }
 
 function validate() {
@@ -172,6 +239,7 @@ function handleSubmit() {
     publisher: form.publisher || null,
     year: form.year || null,
     genre: form.genre || null,
+    cover_url: form.cover_url || null,
   })
 }
 </script>

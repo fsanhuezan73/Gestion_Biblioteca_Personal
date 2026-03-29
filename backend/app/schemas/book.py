@@ -10,6 +10,7 @@ class BookCreate(BaseModel):
     year: Optional[int] = None
     genre: Optional[str] = None
     publisher: Optional[str] = None
+    cover_url: Optional[str] = None
 
     model_config = {"str_strip_whitespace": True}
 
@@ -21,6 +22,7 @@ class BookUpdate(BaseModel):
     year: Optional[int] = None
     genre: Optional[str] = None
     publisher: Optional[str] = None
+    cover_url: Optional[str] = None
 
     model_config = {"str_strip_whitespace": True}
 
@@ -33,4 +35,5 @@ class BookOut(BaseModel):
     year: Optional[int] = None
     genre: Optional[str] = None
     publisher: Optional[str] = None
+    cover_url: Optional[str] = None
     created_at: Optional[datetime] = None

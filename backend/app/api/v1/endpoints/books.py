@@ -46,7 +46,8 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
                b.year,
                g.name   AS genre,
                p.name   AS publisher,
-               b.created_at
+               b.created_at,
+               b.cover_url
         FROM books b
         LEFT JOIN genres     g ON g.id = b.genre_id
         LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -77,6 +78,7 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
         genre=row[4],
         publisher=row[5],
         created_at=row[6],
+        cover_url=row[7],
         authors=authors,
     )
 
@@ -102,7 +104,8 @@ def list_books(current_user_id: int = Depends(get_current_user)):
                    b.year,
                    g.name   AS genre,
                    p.name   AS publisher,
-                   b.created_at
+                   b.created_at,
+                   b.cover_url
             FROM books b
             LEFT JOIN genres     g ON g.id = b.genre_id
             LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -126,7 +129,7 @@ def list_books(current_user_id: int = Depends(get_current_user)):
             authors = [x[0] for x in cursor.fetchall()]
             result.append(BookOut(
                 id=r[0], title=r[1], isbn=r[2], year=r[3],
-                genre=r[4], publisher=r[5], created_at=r[6], authors=authors,
+                genre=r[4], publisher=r[5], created_at=r[6], cover_url=r[7], authors=authors,
             ))
     return result
 
@@ -162,8 +165,8 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
 
         cursor.execute(
             """
-            INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at)
-            VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP)
+            INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at, cover_url)
+            VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP, :cover_url)
             """,
             {
                 "user_id": current_user_id,
@@ -172,6 +175,7 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
                 "pub_year": book_in.year,
                 "genre_id": genre_id,
                 "publisher_id": publisher_id,
+                "cover_url": book_in.cover_url,
             },
         )
         cursor.execute(
@@ -260,7 +264,7 @@ def update_book(
         # las operaciones FK (book_authors). Previene ORA-12860.
         conn.commit()
 
-        scalar_map = {"title": "title", "isbn": "isbn", "year": "pub_year"}
+        scalar_map = {"title": "title", "isbn": "isbn", "year": "pub_year", "cover_url": "cover_url"}
         set_parts = []
         bind_params = {"bid": book_id}
 

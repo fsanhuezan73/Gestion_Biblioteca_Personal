@@ -8,12 +8,18 @@
 
     <div v-else-if="book" class="card shadow-sm">
       <div class="card-body p-4">
-        <!-- Portada placeholder -->
+        <!-- Portada -->
         <div
-          class="d-flex align-items-center justify-content-center bg-light rounded mb-4"
+          class="d-flex align-items-center justify-content-center bg-light rounded mb-4 overflow-hidden"
           style="height: 200px"
         >
-          <span style="font-size: 5rem">📖</span>
+          <img
+            v-if="book.cover_url"
+            :src="book.cover_url"
+            :alt="book.title"
+            style="max-height: 100%; max-width: 100%; object-fit: contain"
+          />
+          <span v-else style="font-size: 5rem">📖</span>
         </div>
 
         <h2 class="fw-bold mb-1">{{ book.title }}</h2>

@@ -1,12 +1,18 @@
 <template>
   <RouterLink :to="`/books/${book.id}`" class="text-decoration-none">
     <div class="card h-100 shadow-sm book-card">
-      <!-- Portada placeholder -->
+      <!-- Portada -->
       <div
-        class="card-img-top d-flex align-items-center justify-content-center bg-light"
-        style="height: 160px; font-size: 3.5rem"
+        class="card-img-top d-flex align-items-center justify-content-center bg-light overflow-hidden"
+        style="height: 160px"
       >
-        📖
+        <img
+          v-if="book.cover_url"
+          :src="book.cover_url"
+          :alt="book.title"
+          style="height: 100%; width: 100%; object-fit: cover"
+        />
+        <span v-else style="font-size: 3.5rem">📖</span>
       </div>
       <div class="card-body d-flex flex-column">
         <h6 class="card-title fw-bold text-dark mb-1 text-truncate" :title="book.title">
