@@ -55,7 +55,7 @@ WALLET_DIR="/workspaces/Gestion_Biblioteca_Personal/wallet"
 if [ -n "${ORACLE_WALLET_B64:-}" ]; then
   mkdir -p "$WALLET_DIR"
   echo "$ORACLE_WALLET_B64" | base64 -d > /tmp/wallet.zip
-  unzip -o /tmp/wallet.zip -d "$WALLET_DIR"
+  unzip -o -j /tmp/wallet.zip -d "$WALLET_DIR"   # -j: sin subdirectorios
   rm /tmp/wallet.zip
   echo "    ✓ Wallet descomprimido en $WALLET_DIR"
 else
