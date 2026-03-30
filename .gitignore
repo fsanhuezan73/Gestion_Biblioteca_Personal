@@ -26,6 +26,8 @@ ojdbc.properties
 # === OS / IDE ===
 .DS_Store
 **/.DS_Store
+.vscode/*
+!.vscode/tasks.json
 Thumbs.db
 .vscode/
 .idea/
