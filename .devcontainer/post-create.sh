@@ -57,7 +57,12 @@ if [ -n "${ORACLE_WALLET_B64:-}" ]; then
   echo "$ORACLE_WALLET_B64" | base64 -d > /tmp/wallet.zip
   unzip -o -j /tmp/wallet.zip -d "$WALLET_DIR"   # -j: sin subdirectorios
   rm /tmp/wallet.zip
-  echo "    ✓ Wallet descomprimido en $WALLET_DIR"
+  # Corregir ruta en sqlnet.ora (el wallet trae la ruta de la máquina original)
+  cat > "$WALLET_DIR/sqlnet.ora" << 'SQLNET'
+WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="/workspaces/Gestion_Biblioteca_Personal/wallet")))
+SSL_SERVER_DN_MATCH=yes
+SQLNET
+  echo "    ✓ Wallet descomprimido y sqlnet.ora corregido en $WALLET_DIR"
 else
   echo "    ⚠ Secret ORACLE_WALLET_B64 no encontrado."
   echo "      Sigue los pasos de la guía para agregar el wallet."
