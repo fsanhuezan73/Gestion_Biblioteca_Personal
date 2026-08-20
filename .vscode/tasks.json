@@ -8,8 +8,7 @@
       "presentation": {
         "panel": "dedicated",
         "reveal": "always",
-        "group": "servers",
-        "tab": "Backend :8000"
+        "group": "servers"
       },
       "runOptions": {
         "runOn": "folderOpen"
@@ -23,8 +22,7 @@
       "presentation": {
         "panel": "dedicated",
         "reveal": "always",
-        "group": "servers",
-        "tab": "Frontend :5173"
+        "group": "servers"
       },
       "runOptions": {
         "runOn": "folderOpen"
