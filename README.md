@@ -1,128 +1,194 @@
 # Gestión Biblioteca Personal
 
-Sistema web para gestionar tu colección de libros personal.
+Sistema web para gestionar la colección personal de libros con autenticación JWT, catálogo, edición y estado de lectura.
 
 **Stack**: Vue 3 + Bootstrap 5 (frontend) · FastAPI + Python (backend) · Oracle Autonomous Database 26ai
 
 ---
 
-## Estructura del Proyecto
+## Estado de la demo
 
-```
-Gestion_Biblioteca_Personal/
-├── backend/        ← API REST (FastAPI + Python)
-│   ├── app/
-│   │   ├── main.py                # Entrada de la app
-│   │   ├── api/v1/endpoints/      # auth.py, books.py
-│   │   ├── core/                  # config.py, security.py
-│   │   ├── db/session.py          # Pool conexiones Oracle
-│   │   └── schemas/               # Pydantic models
-│   ├── sql/001_create_tables.sql  # Script de BD
-│   ├── requirements.txt
-│   └── .env.example
-└── frontend/       ← SPA (Vue 3 + Vite)
-    ├── src/
-    │   ├── views/       # Pantallas de la app
-    │   ├── components/  # Componentes reutilizables
-    │   ├── stores/      # Pinia: auth.js, books.js
-    │   ├── router/      # Vue Router + guards
-    │   └── utils/api.js # Axios + interceptor JWT
-    └── package.json
-```
+La aplicación está preparada para demostración local con:
+
+- Frontend en `http://localhost:5173`
+- Backend en `http://localhost:8000`
+- Swagger/OpenAPI en `http://localhost:8000/docs`
 
 ---
 
-## Configuración inicial
+## Requisitos previos
 
-### 1. Clonar y configurar variables de entorno
+- Python 3.10+
+- Node.js 18+
+- npm
+- Oracle Autonomous Database configurado o un servicio Oracle accesible
+- Wallet de Oracle si se conecta a Autonomous Database
+
+---
+
+## Arranque rápido para demo
+
+### Opción 1: script de arranque
 
 ```bash
-git clone <url-del-repo>
 cd Gestion_Biblioteca_Personal
-cp backend/.env.example backend/.env
-# Editar backend/.env con tus credenciales de Oracle y un JWT secret
+chmod +x start-demo.sh
+./start-demo.sh
 ```
 
-### 2. Crear tablas en Oracle
+Esto levantará automáticamente:
 
-Conectar a Oracle SQL Developer Web (o SQLcl) y ejecutar:
+- backend en puerto `8000`
+- frontend en puerto `5173`
+
+### Opción 2: arranque manual
+
+#### 1) Preparar variables de entorno
+
+```bash
+cd Gestion_Biblioteca_Personal
+cp backend/.env.example backend/.env
+```
+
+Edita `backend/.env` con tus credenciales reales de Oracle y el secreto JWT.
+
+Ejemplo:
+
+```env
+ORACLE_USER=ADMIN
+ORACLE_PASSWORD=TuPassword123
+ORACLE_DSN=tu_servicio_high
+ORACLE_WALLET_DIR=/ruta/al/wallet
+ORACLE_WALLET_PASSWORD=tu_wallet_password
+JWT_SECRET_KEY=una_clave_larga_y_segura
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+APP_ENV=development
+```
+
+#### 2) Crear tablas en Oracle
+
+Ejecuta el SQL de inicialización:
+
 ```sql
 @backend/sql/001_create_tables.sql
 ```
 
-### 3. Instalar dependencias del backend
+#### 3) Backend
 
 ```bash
-cd backend
+cd Gestion_Biblioteca_Personal/backend
 python3 -m venv venv
-source venv/bin/activate          # macOS/Linux
-# venv\Scripts\activate           # Windows
+source venv/bin/activate
 pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 4. Arrancar el servidor backend
+Backend disponible en:
+
+- `http://localhost:8000`
+- `http://localhost:8000/docs`
+
+#### 4) Frontend
+
+```bash
+cd Gestion_Biblioteca_Personal/frontend
+npm install
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+Frontend disponible en:
+
+- `http://localhost:5173`
+
+---
+
+## Estructura del proyecto
+
+```text
+Gestion_Biblioteca_Personal/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/
+│   │   │   ├── endpoints/
+│   │   │   └── router.py
+│   │   ├── core/
+│   │   ├── db/
+│   │   ├── schemas/
+│   │   └── main.py
+│   ├── sql/
+│   ├── .env.example
+│   ├── requirements.txt
+│   ├── pytest.ini
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   ├── vite.config.js
+│   └── index.html
+├── README.md
+├── start-demo.sh
+├── Wallet/
+└── Plan de pruebas/
+```
+
+---
+
+## Endpoints principales
+
+| Método | Ruta | Descripción | Auth |
+| -------- | ------ | ------------- | ------ |
+| `POST` | `/api/v1/auth/register` | Registro de usuario | No |
+| `POST` | `/api/v1/auth/login` | Login y emisión de JWT | No |
+| `GET` | `/api/v1/books/` | Listar libros del usuario | ✅ |
+| `POST` | `/api/v1/books/` | Crear libro | ✅ |
+| `GET` | `/api/v1/books/{id}` | Detalle de libro | ✅ |
+| `PUT` | `/api/v1/books/{id}` | Editar libro | ✅ |
+| `DELETE` | `/api/v1/books/{id}` | Eliminar libro | ✅ |
+| `GET` | `/health` | Health check del backend | No |
+
+---
+
+## Validación recomendada antes de la demo
 
 ```bash
 cd backend
 source venv/bin/activate
-uvicorn app.main:app --reload
-# API disponible en http://localhost:8000
-# Docs interactivos: http://localhost:8000/docs
+pytest -q
 ```
 
-### 5. Instalar dependencias del frontend
+O para validación más específica:
+
+```bash
+cd backend
+source venv/bin/activate
+pytest tests/integration -q
+```
+
+Frontend:
 
 ```bash
 cd frontend
-npm install
-```
-
-### 6. Arrancar el servidor frontend
-
-```bash
-cd frontend
-npm run dev
-# App disponible en http://localhost:5173
+npm run build
 ```
 
 ---
 
-## Variables de entorno (backend/.env)
+## Notas operativas
 
-| Variable | Descripción |
-|----------|-------------|
-| `ORACLE_USER` | Usuario de la BD Oracle |
-| `ORACLE_PASSWORD` | Contraseña de la BD |
-| `ORACLE_DSN` | Service name (ej: `nombre_high`) |
-| `ORACLE_WALLET_DIR` | Ruta al directorio del wallet extraído |
-| `ORACLE_WALLET_PASSWORD` | Contraseña del wallet |
-| `JWT_SECRET_KEY` | Clave secreta para firmar JWT (larga y aleatoria) |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Duración del token (default: 30) |
+- La API usa CORS para permitir peticiones desde `http://localhost:5173`.
+- El flujo de autenticación usa JWT con token en header `Authorization: Bearer ...`.
+- La base de datos Oracle se gestiona a través del pool de conexiones configurado en `backend/app/db/session.py`.
+- Si se usa Oracle Autonomous Database, el wallet debe estar disponible y referenciado en `ORACLE_WALLET_DIR`.
 
 ---
 
-## Endpoints de la API
+## Demo checklist
 
-| Método | Ruta | Descripción | Auth |
-|--------|------|-------------|------|
-| `POST` | `/api/v1/auth/register` | Registrar nuevo usuario | No |
-| `POST` | `/api/v1/auth/login` | Login → retorna JWT | No |
-| `GET` | `/api/v1/books/` | Listar libros del usuario | ✅ JWT |
-| `POST` | `/api/v1/books/` | Añadir libro | ✅ JWT |
-| `GET` | `/api/v1/books/{id}` | Detalle de un libro | ✅ JWT |
-| `PUT` | `/api/v1/books/{id}` | Editar libro | ✅ JWT |
-| `DELETE` | `/api/v1/books/{id}` | Eliminar libro (soft delete) | ✅ JWT |
-| `GET` | `/health` | Health check | No |
-
-Documentación interactiva completa: `http://localhost:8000/docs`
-
----
-
-## Backlog / Sprints
-
-| Sprint | Historias de Usuario |
-|--------|---------------------|
-| **Sprint 1** ✅ | Setup + HU-07 (Sign Up) + HU-08 (Login JWT) |
-| **Sprint 2** ✅ | HU-01 (Añadir libro) + HU-02 (Ver lista) + HU-03 (Editar) + HU-04 (Eliminar) |
-| **Sprint 3** 🔜 | HU-05 (Búsqueda) + HU-06 (Estado de lectura) |
-| **Sprint 4** 🔜 | HU-09 (Autocompletado ISBN vía Google Books API) |
+- [x] Backend operativo
+- [x] Frontend operativo
+- [x] Autenticación funcionando
+- [x] CRUD de libros funcionando
+- [x] Portadas visibles completas en UX
+- [x] Build de frontend validada
+- [x] Documentación de arranque actualizada

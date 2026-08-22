@@ -10,14 +10,13 @@
       <div class="card-body p-4">
         <!-- Portada -->
         <div
-          class="d-flex align-items-center justify-content-center bg-light rounded mb-4 overflow-hidden"
-          style="height: 200px"
+          class="d-flex align-items-center justify-content-center rounded mb-4 overflow-hidden book-detail-cover"
         >
           <img
             v-if="book.cover_url"
             :src="book.cover_url"
             :alt="book.title"
-            style="max-height: 100%; max-width: 100%; object-fit: contain"
+            class="book-detail-cover-image"
           />
           <span v-else style="font-size: 5rem">📖</span>
         </div>
@@ -79,6 +78,25 @@
     />
   </div>
 </template>
+
+<style scoped>
+.book-detail-cover {
+  width: min(100%, 280px);
+  height: 360px;
+  margin: 0 auto 1.5rem;
+  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f6 100%);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  aspect-ratio: 3 / 4;
+}
+.book-detail-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  padding: 1rem;
+}
+</style>
 
 <script setup>
 import { ref, onMounted } from 'vue'

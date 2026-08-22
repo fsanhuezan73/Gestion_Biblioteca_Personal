@@ -11,12 +11,18 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true, // Escucha en 0.0.0.0 — necesario para Codespaces y Docker
+    host: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000', // IPv4 explícito — evita que Node.js use ::1 (IPv6)
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    exclude: ['**/tests/e2e/**', '**/node_modules/**'],
   },
 })
