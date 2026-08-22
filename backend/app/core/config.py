@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
 
+    allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     app_env: str = "development"
 
     class Config:

@@ -3,7 +3,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
+from app.core.config import get_settings
 from app.db.session import init_db_pool, close_db_pool
+
+settings = get_settings()
+allowed_origins = [
+    origin.strip()
+    for origin in settings.allowed_origins.split(",")
+    if origin.strip()
+]
 
 
 @asynccontextmanager
@@ -25,10 +33,7 @@ app = FastAPI(
 # CORS — permitir peticiones desde el frontend Vue.js en desarrollo
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite dev server
-        "http://localhost:3000",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
