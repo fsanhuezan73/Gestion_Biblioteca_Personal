@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     oracle_dsn: str
     oracle_wallet_dir: str = ""
     oracle_wallet_password: str = ""
+    oracle_wallet_base64: str = ""
 
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"

@@ -21,6 +21,8 @@ services:
         sync: false
       - key: ORACLE_WALLET_PASSWORD
         sync: false
+      - key: ORACLE_WALLET_BASE64
+        sync: false
       - key: JWT_SECRET_KEY
         sync: false
       - key: JWT_ALGORITHM

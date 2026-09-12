@@ -28,6 +28,7 @@ ORACLE_PASSWORD=tu_password
 ORACLE_DSN=tu_dsn
 ORACLE_WALLET_DIR=
 ORACLE_WALLET_PASSWORD=
+ORACLE_WALLET_BASE64=zip_del_wallet_en_base64
 JWT_SECRET_KEY=tu_secret_largo_y_seguro
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -37,6 +38,19 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 - `ALLOWED_ORIGINS` debe incluir exactamente el dominio público del frontend en Vercel.
 - Si usas un dominio propio de Vercel, pon ese valor.
 - Si tu app se sirve desde `https://<proyecto>.vercel.app`, usa ese valor.
+- Render no puede leer una ruta de tu Mac. Deja `ORACLE_WALLET_DIR` vacío y define
+	`ORACLE_WALLET_BASE64` con el ZIP del wallet codificado en Base64.
+
+En macOS, genera el valor sin imprimirlo en pantalla:
+
+```bash
+cd Wallet
+zip -r -q ../oracle-wallet.zip wallet
+base64 < ../oracle-wallet.zip | tr -d '\n' | pbcopy
+rm ../oracle-wallet.zip
+```
+
+Después pega el contenido del portapapeles en el valor secreto `ORACLE_WALLET_BASE64` de Render.
 
 ## 3) Frontend en Vercel
 
