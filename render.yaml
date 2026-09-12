@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: biblioteca-personal-api
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ORACLE_USER
+        sync: false
+      - key: ORACLE_PASSWORD
+        sync: false
+      - key: ORACLE_DSN
+        sync: false
+      - key: ORACLE_WALLET_DIR
+        sync: false
+      - key: ORACLE_WALLET_PASSWORD
+        sync: false
+      - key: ORACLE_WALLET_BASE64
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"

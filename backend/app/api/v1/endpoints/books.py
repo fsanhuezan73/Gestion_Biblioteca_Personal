@@ -1,11 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, status
-from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-import oracledb
-
-from app.db.session import get_db_connection
 from app.core.security import get_current_user
-from app.schemas.book import BookCreate, BookUpdate, BookOut, VALID_READING_STATUSES
+from app.db.session import get_db_connection
+from app.schemas.book import VALID_READING_STATUSES, BookCreate, BookOut, BookUpdate
 
 router = APIRouter(prefix="/books", tags=["Libros"])
 
@@ -23,16 +20,27 @@ def _get_or_create_id(cursor, table: str, name: str) -> int:
     Usa SELECT-first para evitar escrituras innecesarias y los bloqueos
     de índice (ORA-12860) que generan INSERT/MERGE en Oracle ADB.
     Solo hace INSERT cuando el registro realmente no existe."""
-    cursor.execute(
-        f"SELECT id FROM {table} WHERE LOWER(name) = LOWER(:n)", {"n": name}
-    )
+    allowed_tables = {"genres", "publishers", "authors"}
+    if table not in allowed_tables:
+        raise ValueError(f"Tabla de catálogo no permitida: {table}")
+
+    if table == "genres":
+        select_sql = "SELECT id FROM genres WHERE LOWER(name) = LOWER(:n)"
+        insert_sql = "INSERT INTO genres (name) VALUES (:n)"
+    elif table == "publishers":
+        select_sql = "SELECT id FROM publishers WHERE LOWER(name) = LOWER(:n)"
+        insert_sql = "INSERT INTO publishers (name) VALUES (:n)"
+    else:
+        select_sql = "SELECT id FROM authors WHERE LOWER(name) = LOWER(:n)"
+        insert_sql = "INSERT INTO authors (name) VALUES (:n)"
+
+    cursor.execute(select_sql, {"n": name})
     row = cursor.fetchone()
     if row:
         return row[0]
-    cursor.execute(f"INSERT INTO {table} (name) VALUES (:n)", {"n": name})
-    cursor.execute(
-        f"SELECT id FROM {table} WHERE LOWER(name) = LOWER(:n)", {"n": name}
-    )
+
+    cursor.execute(insert_sql, {"n": name})
+    cursor.execute(select_sql, {"n": name})
     return cursor.fetchone()[0]
 
 
@@ -91,14 +99,14 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
 
 @router.get(
     "/",
-    response_model=List[BookOut],
+    response_model=list[BookOut],
     summary="Listar todos los libros del usuario",
 )
 def list_books(
     current_user_id: int = Depends(get_current_user),
-    search: Optional[str] = Query(None, description="Búsqueda libre en título, autor, ISBN, año, género"),
-    genre: Optional[str] = Query(None, description="Filtrar por género exacto"),
-    reading_status: Optional[str] = Query(None, description="Filtrar por estado de lectura"),
+    search: str | None = Query(None, description="Búsqueda libre en título, autor, ISBN, año, género"),
+    genre: str | None = Query(None, description="Filtrar por género exacto"),
+    reading_status: str | None = Query(None, description="Filtrar por estado de lectura"),
 ):
     """HU-02 + HU-05: Retorna libros activos del usuario con búsqueda y filtros."""
     with get_db_connection() as conn:
@@ -238,7 +246,7 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
 
 @router.get(
     "/genres",
-    response_model=List[str],
+    response_model=list[str],
     summary="Listar géneros usados por el usuario",
 )
 def list_genres(current_user_id: int = Depends(get_current_user)):
@@ -327,22 +335,32 @@ def update_book(
         # las operaciones FK (book_authors). Previene ORA-12860.
         conn.commit()
 
-        scalar_map = {"title": "title", "isbn": "isbn", "year": "pub_year", "cover_url": "cover_url", "reading_status": "reading_status"}
-        set_parts = []
-        bind_params = {"bid": book_id}
+        scalar_map = {
+            "title": {"sql": "UPDATE books SET title = :title WHERE id = :bid", "param": "title"},
+            "isbn": {"sql": "UPDATE books SET isbn = :isbn WHERE id = :bid", "param": "isbn"},
+            "year": {"sql": "UPDATE books SET year = :pub_year WHERE id = :bid", "param": "pub_year"},
+            "cover_url": {"sql": "UPDATE books SET cover_url = :cover_url WHERE id = :bid", "param": "cover_url"},
+            "reading_status": {
+                "sql": "UPDATE books SET reading_status = :reading_status WHERE id = :bid",
+                "param": "reading_status",
+            },
+        }
 
-        for field, bind in scalar_map.items():
+        for field, config in scalar_map.items():
             if field in updates:
-                set_parts.append(f"{field} = :{bind}")
-                bind_params[bind] = updates[field]
+                cursor.execute(config["sql"], {config["param"]: updates[field], "bid": book_id})
 
         if genre_id is not _UNSET:
-            set_parts.append("genre_id = :genre_id")
-            bind_params["genre_id"] = genre_id
+            cursor.execute(
+                "UPDATE books SET genre_id = :genre_id WHERE id = :bid",
+                {"genre_id": genre_id, "bid": book_id},
+            )
 
         if publisher_id is not _UNSET:
-            set_parts.append("publisher_id = :publisher_id")
-            bind_params["publisher_id"] = publisher_id
+            cursor.execute(
+                "UPDATE books SET publisher_id = :publisher_id WHERE id = :bid",
+                {"publisher_id": publisher_id, "bid": book_id},
+            )
 
         if author_ids is not None:
             # Diff-based: solo borrar las eliminadas, solo insertar las nuevas.
@@ -366,12 +384,6 @@ def update_book(
                     "INSERT INTO book_authors (book_id, author_id) VALUES (:bid, :aid)",
                     {"bid": book_id, "aid": aid},
                 )
-
-        if set_parts:
-            cursor.execute(
-                f"UPDATE books SET {', '.join(set_parts)} WHERE id = :bid",
-                bind_params,
-            )
 
         book = _fetch_book_row(cursor, book_id)
 

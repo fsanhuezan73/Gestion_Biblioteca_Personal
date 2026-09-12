@@ -25,8 +25,8 @@
               v-if="book.cover_url"
               :src="book.cover_url"
               :alt="book.title"
-              class="rounded"
-              style="width: 36px; height: 48px; object-fit: cover"
+              class="rounded book-table-cover"
+              style="width: 36px; height: 48px;"
             />
             <span v-else class="d-inline-block text-center" style="width: 36px; font-size: 1.5rem">📖</span>
           </td>
@@ -72,5 +72,13 @@ function statusClass(status) {
 }
 .book-row:hover {
   background-color: rgba(0, 0, 0, 0.03);
+}
+.book-table-cover {
+  object-fit: contain;
+  object-position: center;
+  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f6 100%);
+  padding: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 </style>

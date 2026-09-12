@@ -3,14 +3,13 @@
     <div class="card h-100 shadow-sm book-card">
       <!-- Portada -->
       <div
-        class="card-img-top d-flex align-items-center justify-content-center bg-light overflow-hidden"
-        style="height: 160px"
+        class="card-img-top d-flex align-items-center justify-content-center bg-light overflow-hidden book-cover-frame"
       >
         <img
           v-if="book.cover_url"
           :src="book.cover_url"
           :alt="book.title"
-          style="height: 100%; width: 100%; object-fit: cover"
+          class="book-cover-image"
         />
         <span v-else style="font-size: 3.5rem">📖</span>
       </div>
@@ -56,5 +55,24 @@ const statusBadgeClass = computed(() => {
 .book-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+}
+.book-card:hover .book-cover-image {
+  transform: scale(1.04);
+}
+.book-cover-frame {
+  height: 190px;
+  padding: 0.75rem;
+  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f6 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  aspect-ratio: 3 / 4;
+}
+.book-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 0.5rem;
+  transition: transform 0.2s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
 }
 </style>
