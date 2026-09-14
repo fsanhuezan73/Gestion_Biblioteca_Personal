@@ -1,18 +1,21 @@
 <template>
-  <div class="container py-4" style="max-width: 600px">
+  <div class="container py-4 py-md-5">
     <div class="d-flex align-items-center mb-4">
       <RouterLink :to="`/books/${route.params.id}`" class="btn btn-outline-secondary btn-sm me-3">
         ← Volver
       </RouterLink>
-      <h2 class="mb-0 fw-bold">Editar libro</h2>
+      <div>
+        <p class="page-kicker mb-0">Tu colección</p>
+        <h2 class="page-title mb-0 fw-bold">Editar libro</h2>
+      </div>
     </div>
 
     <div v-if="loadingBook" class="text-center py-5">
       <div class="spinner-border text-primary" />
     </div>
 
-    <div v-else class="card shadow-sm">
-      <div class="card-body p-4">
+    <div v-else class="card book-form-card">
+      <div class="card-body p-4 p-md-5">
         <BookForm
           :initial-data="initialData"
           :loading="saving"

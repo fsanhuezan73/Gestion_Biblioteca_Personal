@@ -1,13 +1,13 @@
 <template>
-  <div class="container py-4" style="max-width: 700px">
+  <div class="container py-4 py-md-5" style="max-width: 760px">
     <RouterLink to="/library" class="btn btn-outline-secondary btn-sm mb-4">← Volver</RouterLink>
 
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border text-primary" />
     </div>
 
-    <div v-else-if="book" class="card shadow-sm">
-      <div class="card-body p-4">
+    <div v-else-if="book" class="card">
+      <div class="card-body p-4 p-md-5">
         <!-- Portada -->
         <div
           class="d-flex align-items-center justify-content-center rounded mb-4 overflow-hidden book-detail-cover"
@@ -18,9 +18,10 @@
             :alt="book.title"
             class="book-detail-cover-image"
           />
-          <span v-else style="font-size: 5rem">📖</span>
+          <span class="book-detail-placeholder" v-else>📖</span>
         </div>
 
+        <p class="page-kicker mb-1">Ficha del libro</p>
         <h2 class="fw-bold mb-1">{{ book.title }}</h2>
         <p class="text-muted fs-5 mb-3">{{ book.authors?.join(', ') }}</p>
 
@@ -79,25 +80,6 @@
   </div>
 </template>
 
-<style scoped>
-.book-detail-cover {
-  width: min(100%, 280px);
-  height: 360px;
-  margin: 0 auto 1.5rem;
-  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f6 100%);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-  aspect-ratio: 3 / 4;
-}
-.book-detail-cover-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  padding: 1rem;
-}
-</style>
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -144,3 +126,25 @@ async function handleDelete() {
   }
 }
 </script>
+
+<style scoped>
+.book-detail-cover {
+  width: min(100%, 280px);
+  height: 360px;
+  margin: 0 auto 1.5rem;
+  background: linear-gradient(145deg, #eef1fb 0%, #f8f9fc 100%);
+  border: 1px solid #e2e7f0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  aspect-ratio: 3 / 4;
+}
+.book-detail-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  padding: 1rem;
+}
+.book-detail-placeholder {
+  font-size: 5rem;
+}
+</style>

@@ -1,12 +1,15 @@
 <template>
-  <div class="container py-4" style="max-width: 600px">
+  <div class="container py-4 py-md-5">
     <div class="d-flex align-items-center mb-4">
       <RouterLink to="/library" class="btn btn-outline-secondary btn-sm me-3">← Volver</RouterLink>
-      <h2 class="mb-0 fw-bold">Añadir nuevo libro</h2>
+      <div>
+        <p class="page-kicker mb-0">Nueva incorporación</p>
+        <h2 class="page-title mb-0 fw-bold">Añadir un libro</h2>
+      </div>
     </div>
 
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
+    <div class="card book-form-card">
+      <div class="card-body p-4 p-md-5">
         <BookForm
           :loading="loading"
           :api-error="apiError"

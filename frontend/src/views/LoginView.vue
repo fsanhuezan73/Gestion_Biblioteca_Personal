@@ -1,8 +1,10 @@
 <template>
-  <div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
-    <div class="card shadow-sm" style="width: 100%; max-width: 420px">
-      <div class="card-body p-4">
-        <h2 class="card-title text-center mb-1 fw-bold">📚 Biblioteca Personal</h2>
+  <div class="auth-page d-flex align-items-center justify-content-center p-3">
+    <div class="card auth-card shadow-lg w-100">
+      <div class="card-body p-4 p-md-5">
+        <div class="auth-logo">📚</div>
+        <p class="page-kicker text-center mb-1">Biblioteca Personal</p>
+        <h2 class="card-title display-font text-center mb-1 fw-bold">Bienvenido de vuelta</h2>
         <p class="text-center text-muted mb-4">Inicia sesión en tu cuenta</p>
 
         <div v-if="route.query.registered" class="alert alert-success" role="alert">
