@@ -1,5 +1,8 @@
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
+from pydantic_settings import BaseSettings
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -14,11 +17,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
 
-    allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
     app_env: str = "development"
 
     class Config:
-        env_file = ".env"
+        env_file = (str(BASE_DIR / ".env"), ".env", "backend/.env")
         case_sensitive = False
 
 

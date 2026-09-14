@@ -1,6 +1,6 @@
 <template>
   <RouterLink :to="`/books/${book.id}`" class="text-decoration-none">
-    <div class="card h-100 shadow-sm book-card">
+    <div class="card h-100 book-card">
       <!-- Portada -->
       <div
         class="card-img-top d-flex align-items-center justify-content-center bg-light overflow-hidden book-cover-frame"
@@ -11,7 +11,7 @@
           :alt="book.title"
           class="book-cover-image"
         />
-        <span v-else style="font-size: 3.5rem">📖</span>
+        <span v-else class="book-placeholder">📖</span>
       </div>
       <div class="card-body d-flex flex-column">
         <h6 class="card-title fw-bold text-dark mb-1 text-truncate" :title="book.title">
@@ -19,7 +19,7 @@
         </h6>
         <p class="card-text text-muted small mb-2 text-truncate">{{ book.authors?.join(', ') }}</p>
         <div class="mt-auto d-flex gap-1 flex-wrap">
-          <span v-if="book.genre" class="badge bg-secondary">
+          <span v-if="book.genre" class="badge genre-badge">
             {{ book.genre }}
           </span>
           <span class="badge" :class="statusBadgeClass">
@@ -49,21 +49,22 @@ const statusBadgeClass = computed(() => {
 
 <style scoped>
 .book-card {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
 .book-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-6px);
+  box-shadow: 0 18px 32px rgba(32, 48, 83, 0.14) !important;
 }
 .book-card:hover .book-cover-image {
   transform: scale(1.04);
 }
 .book-cover-frame {
-  height: 190px;
+  height: 220px;
   padding: 0.75rem;
-  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f6 100%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  background: linear-gradient(145deg, #eef1fb 0%, #f8f9fc 100%);
+  border-bottom: 1px solid #e2e7f0;
   aspect-ratio: 3 / 4;
 }
 .book-cover-image {
@@ -74,5 +75,13 @@ const statusBadgeClass = computed(() => {
   border-radius: 0.5rem;
   transition: transform 0.2s ease;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
+}
+.book-placeholder {
+  font-size: 3.5rem;
+  opacity: 0.8;
+}
+.genre-badge {
+  color: #465273;
+  background: #edf0f6;
 }
 </style>

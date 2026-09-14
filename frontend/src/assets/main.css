@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+:root {
+  --ink: #18233a;
+  --muted: #65718a;
+  --brand: #3c4fa3;
+  --brand-dark: #293b82;
+  --surface: #ffffff;
+  --canvas: #f5f7fb;
+  --border: #e2e7f0;
+  --shadow: 0 12px 32px rgba(32, 48, 83, 0.08);
+}
+
+body {
+  min-width: 320px;
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+h1, h2, h3, .display-font {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.btn {
+  --bs-btn-font-weight: 600;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.9rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--brand);
+  --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-bg: var(--brand-dark);
+  --bs-btn-hover-border-color: var(--brand-dark);
+  --bs-btn-active-bg: var(--brand-dark);
+  --bs-btn-active-border-color: var(--brand-dark);
+  box-shadow: 0 4px 12px rgba(60, 79, 163, 0.2);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.form-control, .form-select, .input-group-text {
+  border-color: var(--border);
+  min-height: 2.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #8d9be0;
+  box-shadow: 0 0 0 0.22rem rgba(60, 79, 163, 0.12);
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow) !important;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(147, 164, 237, 0.18), transparent 30rem),
+    var(--canvas);
+}
+
+.app-navbar {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(32, 48, 83, 0.06);
+}
+
+.brand-mark {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: #e9edff;
+  font-size: 1.2rem;
+}
+
+.page-kicker {
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.page-title {
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  letter-spacing: -0.025em;
+}
+
+.search-panel {
+  border: 0;
+  box-shadow: 0 8px 28px rgba(32, 48, 83, 0.06) !important;
+}
+
+.auth-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(24, 35, 58, 0.9), rgba(60, 79, 163, 0.82)),
+    url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1800&q=80') center / cover;
+}
+
+.auth-card {
+  max-width: 440px;
+  border: 0;
+  border-radius: 1.25rem;
+}
+
+.auth-logo {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  margin: 0 auto 1rem;
+  border-radius: 1rem;
+  background: #e9edff;
+  font-size: 1.7rem;
+}
+
+.book-form-card {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+@media (max-width: 575.98px) {
+  .app-navbar { border-radius: 0.75rem; }
+  .page-title { font-size: 1.7rem; }
+}

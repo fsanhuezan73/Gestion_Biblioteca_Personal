@@ -3,9 +3,9 @@
     <table class="table table-hover align-middle mb-0">
       <thead class="table-light">
         <tr>
-          <th style="width: 50px"></th>
+          <th style="width: 56px"></th>
           <th>Título</th>
-          <th>Autor(es)</th>
+          <th>Autor</th>
           <th>Género</th>
           <th>Año</th>
           <th>ISBN</th>
@@ -28,7 +28,7 @@
               class="rounded book-table-cover"
               style="width: 36px; height: 48px;"
             />
-            <span v-else class="d-inline-block text-center" style="width: 36px; font-size: 1.5rem">📖</span>
+            <span v-else class="d-inline-block text-center book-table-placeholder">📖</span>
           </td>
           <td class="fw-semibold text-truncate" style="max-width: 250px" :title="book.title">
             {{ book.title }}
@@ -37,7 +37,7 @@
             {{ book.authors?.join(', ') }}
           </td>
           <td>
-            <span v-if="book.genre" class="badge bg-secondary">{{ book.genre }}</span>
+            <span v-if="book.genre" class="badge genre-badge">{{ book.genre }}</span>
           </td>
           <td class="text-muted">{{ book.year }}</td>
           <td class="text-muted small">{{ book.isbn }}</td>
@@ -71,7 +71,7 @@ function statusClass(status) {
   transition: background-color 0.15s ease;
 }
 .book-row:hover {
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: #f5f7ff;
 }
 .book-table-cover {
   object-fit: contain;
@@ -80,5 +80,13 @@ function statusClass(status) {
   padding: 2px;
   border: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.book-table-placeholder {
+  width: 36px;
+  font-size: 1.5rem;
+}
+.genre-badge {
+  color: #465273;
+  background: #edf0f6;
 }
 </style>

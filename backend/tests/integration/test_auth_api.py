@@ -109,3 +109,20 @@ def test_login_invalid_credentials():
 
     assert response.status_code == 401
     assert "incorrectos" in response.json()["detail"].lower()
+
+
+def test_cors_preflight_allows_localhost_ports():
+    client = build_client()
+
+    response = client.options(
+        "/api/v1/auth/login",
+        headers={
+            "Origin": "http://localhost:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Content-Type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:5174"
+
