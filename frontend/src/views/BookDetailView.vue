@@ -56,6 +56,8 @@
           </li>
         </ul>
 
+        <BookPersonalDetails ref="personalDetails" :book="book" @saved="book = $event" />
+
         <div class="d-flex gap-2">
           <RouterLink :to="`/books/${book.id}/edit`" class="btn btn-primary">
             ✏️ Editar
@@ -82,9 +84,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useBooksStore } from '@/stores/books'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import BookPersonalDetails from '@/components/BookPersonalDetails.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,6 +98,14 @@ const loading = ref(true)
 const showModal = ref(false)
 const deleteLoading = ref(false)
 const statusUpdating = ref(false)
+const personalDetails = ref(null)
+const bookDeleted = ref(false)
+
+onBeforeRouteLeave(() => {
+  if (!bookDeleted.value && personalDetails.value?.dirty) {
+    return window.confirm('Tienes cambios sin guardar en tu valoración o notas. ¿Quieres salir sin guardarlos?')
+  }
+})
 
 onMounted(async () => {
   try {
@@ -119,6 +130,7 @@ async function handleDelete() {
   deleteLoading.value = true
   try {
     await booksStore.deleteBook(book.value.id)
+    bookDeleted.value = true
     router.push({ name: 'Library', query: { success: 'Libro eliminado correctamente.' } })
   } finally {
     deleteLoading.value = false

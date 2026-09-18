@@ -72,6 +72,10 @@ Ejecuta el SQL de inicialización:
 
 ```sql
 @backend/sql/001_create_tables.sql
+@backend/sql/002_migrate_3nf.sql
+@backend/sql/003_add_cover_url.sql
+@backend/sql/004_add_reading_status.sql
+@backend/sql/005_add_personal_reviews.sql
 ```
 
 #### 3) Backend
@@ -192,3 +196,27 @@ npm run build
 - [x] Portadas visibles completas en UX
 - [x] Build de frontend validada
 - [x] Documentación de arranque actualizada
+
+
+## Valoraciones y notas personales
+
+Desde la ficha de cada libro puedes guardar una valoración opcional de **1 a 5
+estrellas** y notas privadas de hasta **5000 caracteres**, incluyendo reseñas y
+citas en texto plano. Selecciona «Sin valorar» o vacía las notas y guarda para
+borrarlas. «Descartar cambios» recupera lo guardado. La valoración aparece también
+en tarjetas y tabla; las notas se cargan solo con la ficha individual.
+
+La API ofrece `PATCH /api/v1/books/{id}/personal` con `rating` y/o
+`personal_notes`. Omitir un campo conserva su valor; enviar `null` lo borra.
+Solo el propietario puede leer o modificar estos datos mediante la API.
+No hay publicación de reseñas ni edición de HTML.
+
+**Base de datos:** para una instalación existente con 001–004 aplicadas, ejecutar
+solo `backend/sql/005_add_personal_reviews.sql`, primero en un esquema Oracle de
+pruebas. No repetir las migraciones anteriores. La migración agrega dos columnas
+opcionales y una restricción de valores de estrellas, sin cambiar los libros
+existentes. No se aplica al iniciar la aplicación. Oracle confirma DDL
+implícitamente; un `ROLLBACK` no elimina las columnas creadas.
+
+El worktree aísla el código, no Oracle: usar un esquema de pruebas y puertos
+distintos a los del checkout principal. Ver [validación de la funcionalidad](docs/valoraciones-notas.md).

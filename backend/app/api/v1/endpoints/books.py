@@ -1,8 +1,12 @@
+from oracledb import DB_TYPE_CLOB
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.security import get_current_user
 from app.db.session import get_db_connection
-from app.schemas.book import VALID_READING_STATUSES, BookCreate, BookOut, BookUpdate
+from app.schemas.book import (
+    VALID_READING_STATUSES, BookCreate, BookOut, BookPersonalUpdate, BookSummary, BookUpdate,
+)
 
 router = APIRouter(prefix="/books", tags=["Libros"])
 
@@ -56,7 +60,9 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
                p.name   AS publisher,
                b.created_at,
                b.cover_url,
-               b.reading_status
+               b.reading_status,
+               b.rating,
+               b.personal_notes
         FROM books b
         LEFT JOIN genres     g ON g.id = b.genre_id
         LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -89,6 +95,8 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
         created_at=row[6],
         cover_url=row[7],
         reading_status=row[8],
+        rating=row[9],
+        personal_notes=row[10].read() if hasattr(row[10], "read") else row[10],
         authors=authors,
     )
 
@@ -99,7 +107,7 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
 
 @router.get(
     "/",
-    response_model=list[BookOut],
+    response_model=list[BookSummary],
     summary="Listar todos los libros del usuario",
 )
 def list_books(
@@ -122,7 +130,8 @@ def list_books(
                    p.name   AS publisher,
                    b.created_at,
                    b.cover_url,
-                   b.reading_status
+                   b.reading_status,
+                   b.rating
             FROM books b
             LEFT JOIN genres     g ON g.id = b.genre_id
             LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -174,10 +183,10 @@ def list_books(
                 {"bid": r[0]},
             )
             authors = [x[0] for x in cursor.fetchall()]
-            result.append(BookOut(
+            result.append(BookSummary(
                 id=r[0], title=r[1], isbn=r[2], year=r[3],
                 genre=r[4], publisher=r[5], created_at=r[6], cover_url=r[7],
-                reading_status=r[8], authors=authors,
+                reading_status=r[8], rating=r[9], authors=authors,
             ))
     return result
 
@@ -387,6 +396,42 @@ def update_book(
 
         book = _fetch_book_row(cursor, book_id)
 
+    return book
+
+
+@router.patch(
+    "/{book_id}/personal",
+    response_model=BookOut,
+    summary="Guardar valoración y notas privadas de un libro",
+)
+def update_personal_details(
+    book_id: int,
+    body: BookPersonalUpdate,
+    current_user_id: int = Depends(get_current_user),
+):
+    """Campos omitidos se conservan; null elimina la valoración o las notas."""
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=422, detail="Indica una valoración o notas para actualizar")
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Nombres de columna fijos; todos los valores se envían como parámetros.
+        assignments = []
+        if "rating" in updates:
+            assignments.append("rating = :rating")
+        if "personal_notes" in updates:
+            assignments.append("personal_notes = :personal_notes")
+            cursor.setinputsizes(personal_notes=DB_TYPE_CLOB)
+        cursor.execute(
+            "UPDATE books SET " + ", ".join(assignments)
+            + " WHERE id = :bid AND user_id = :user_id AND deleted_at IS NULL",
+            {**updates, "bid": book_id, "user_id": current_user_id},
+        )
+        # Mismo resultado para libros ajenos, eliminados o inexistentes.
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Libro no encontrado")
+        book = _fetch_book_row(cursor, book_id)
     return book
 
 
