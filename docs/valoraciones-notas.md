@@ -99,7 +99,50 @@ Las contraseñas de las cuentas ficticias se entregan en un archivo local tempor
 con permisos restringidos, fuera del repositorio. No son credenciales de Oracle.
 Puedes registrar otra cuenta desde el frontend para realizar tu revisión personal.
 
-## Lista de comprobación para repetir la validación antes de integrar en development
+## Actualización de development y BIBLIOTECA_PERSONAL (18 de septiembre de 2026)
+
+- Al iniciar, el checkout local de `development` estaba dos commits detrás de
+  `origin/development`. Se confirmó el PR #7 y se actualizó mediante fast-forward
+  a `c24505e2d2a9a0ff5f0dcc5a7dc32e2cfb29fa37`, después de migrar Oracle.
+- Usuario conectado y esquema activo confirmados como `BIBLIOTECA_PERSONAL`.
+  La comparación con `BIBLIOTECA_TEST` encontró únicamente las diferencias de 005:
+  RATING, PERSONAL_NOTES, su restricción y el índice interno del CLOB.
+- Se detuvo brevemente el backend. Se guardó un respaldo lógico privado fuera de
+  Git en `~/Backups/BibliotecaPersonal/20260918T160231Z-before-005/`: datos tipados
+  de las seis tablas, DDL, comentarios, metadatos de identidad y suma SHA-256.
+  Se verificaron lectura, integridad y recuentos; no se realizó un ensayo de
+  restauración. No es una copia física administrada de Oracle.
+- Se aplicó solo `005_add_personal_reviews.sql`. No se ejecutaron de nuevo 001–004.
+  Después se verificó igualdad de tablas, columnas, restricciones e índices entre
+  ambos esquemas, sin exigir igualdad de datos ni de nombres generados por Oracle.
+- Los datos originales (6 usuarios, 16 libros, 16 autores, 19 relaciones libro/autor,
+  8 géneros y 16 editoriales) se compararon fila por fila con el respaldo antes y
+  después de las pruebas: sin modificaciones. Los libros originales quedaron sin
+  valoración ni notas.
+- Se reinició el backend en `http://127.0.0.1:8000`. El frontend existente continúa
+  en `http://localhost:5173`. Se conservaron las credenciales del esquema principal
+  y su secreto JWT; no se copiaron credenciales del worktree de pruebas.
+- Once grupos de comprobaciones contra Oracle real aprobados: registro/login,
+  creación, persistencia, 5000 caracteres Unicode, validaciones, conservación al
+  editar título/estado, aislamiento entre usuarios, listado sin notas, borrado y
+  restauración de valoración/notas, libro eliminado y restricción Oracle.
+- Navegador contra servicios reales: login, ficha, guardar 4 estrellas y notas,
+  recarga y persistencia, cuadrícula y tabla. Sin errores JavaScript; visualización
+  comprobada en móvil.
+- Compatibilidad comprobada con el código de `main` (`c3302e8`): login, listado y
+  detalle contra el esquema migrado. Se usó una copia temporal del código sin crear
+  otro worktree ni modificar la rama `main`; esta prueba no cubre todos sus flujos.
+- Se añadieron dos cuentas ficticias identificadas como validación, un autor, un
+  género y dos libros (uno eliminado lógicamente). El libro activo de demostración
+  tiene ID 61 y título `VALIDACIÓN 005 — Libro de demostración`. Las credenciales
+  de estas cuentas están en un archivo temporal privado, fuera del repositorio.
+- Al terminar la validación, `development` y `origin/development` estaban en
+  `c24505e`. La actualización de Oracle no modificó la rama `main`.
+
+La migración 005 ya está aplicada tanto en `BIBLIOTECA_TEST` como en
+`BIBLIOTECA_PERSONAL`: no volver a ejecutarla sobre esos esquemas.
+
+## Lista de comprobación para repetir la validación
 
 1. Verificar las migraciones aplicadas (001–005 ya están instaladas en BIBLIOTECA_TEST;
    no volver a ejecutarlas) y arrancar el backend del worktree en 8001.
