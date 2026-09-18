@@ -10,6 +10,7 @@
           <th>Año</th>
           <th>ISBN</th>
           <th>Estado</th>
+          <th>Valoración</th>
         </tr>
       </thead>
       <tbody>
@@ -46,6 +47,7 @@
               {{ book.reading_status || 'Quiero leer' }}
             </span>
           </td>
+          <td class="text-nowrap"><BookRating :rating="book.rating" /></td>
         </tr>
       </tbody>
     </table>
@@ -53,6 +55,8 @@
 </template>
 
 <script setup>
+import BookRating from './BookRating.vue'
+
 defineProps({
   books: { type: Array, required: true },
 })

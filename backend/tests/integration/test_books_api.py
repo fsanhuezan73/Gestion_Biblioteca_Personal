@@ -81,6 +81,8 @@ def test_create_book_success():
             "2024-01-01T00:00:00",
             "https://example.com/cover.jpg",
             "Quiero leer",
+            None,
+            None,
         ),
     ]
     fetchall_values = [[("George Orwell",)]]
@@ -145,6 +147,7 @@ def test_list_books_returns_user_books():
                 "2024-01-01T00:00:00",
                 "https://example.com/cover.jpg",
                 "Quiero leer",
+                None,
             )
         ],
         [("George Orwell",)],

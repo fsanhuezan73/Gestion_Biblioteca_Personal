@@ -36,3 +36,8 @@ Thumbs.db
 
 # === Documentos Word (no versionables) ===
 *.docx
+
+# === Resultados de pruebas locales ===
+frontend/test-results/
+frontend/playwright-report/
+backend/.pytest_cache/
