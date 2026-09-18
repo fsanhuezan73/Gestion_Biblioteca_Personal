@@ -51,10 +51,22 @@ export const useBooksStore = defineStore('books', () => {
     return data
   }
 
+  async function updatePersonalDetails(id, details) {
+    const { data } = await api.patch(`/books/${id}/personal`, details)
+    const idx = books.value.findIndex((b) => b.id === id)
+    if (idx !== -1) {
+      // La colección conserva solo el resumen, sin cargar notas privadas en cada fila.
+      const summary = { ...data }
+      delete summary.personal_notes
+      books.value[idx] = summary
+    }
+    return data
+  }
+
   async function deleteBook(id) {
     await api.delete(`/books/${id}`)
     books.value = books.value.filter((b) => b.id !== id)
   }
 
-  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, deleteBook }
+  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, deleteBook }
 })

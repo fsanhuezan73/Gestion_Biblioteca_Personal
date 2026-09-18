@@ -18,6 +18,7 @@
           {{ book.title }}
         </h6>
         <p class="card-text text-muted small mb-2 text-truncate">{{ book.authors?.join(', ') }}</p>
+        <div class="mb-2"><BookRating :rating="book.rating" /></div>
         <div class="mt-auto d-flex gap-1 flex-wrap">
           <span v-if="book.genre" class="badge genre-badge">
             {{ book.genre }}
@@ -33,6 +34,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import BookRating from './BookRating.vue'
 
 const props = defineProps({
   book: { type: Object, required: true },
