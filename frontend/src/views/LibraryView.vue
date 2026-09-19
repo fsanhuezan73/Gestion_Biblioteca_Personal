@@ -7,6 +7,9 @@
           <span class="fw-bold fs-5 text-dark">Biblioteca Personal</span>
         </RouterLink>
         <div class="ms-auto d-flex align-items-center gap-2">
+          <RouterLink to="/account" class="btn btn-outline-secondary btn-sm">
+            Mi cuenta
+          </RouterLink>
           <RouterLink to="/books/add" class="btn btn-primary btn-sm">
             + Añadir libro
           </RouterLink>

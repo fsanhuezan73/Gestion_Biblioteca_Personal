@@ -10,6 +10,9 @@
         <div v-if="route.query.registered" class="alert alert-success" role="alert">
           ¡Cuenta creada exitosamente! Ya puedes iniciar sesión.
         </div>
+        <div v-if="route.query.passwordChanged" class="alert alert-success" role="alert">
+          Contraseña actualizada. Inicia sesión nuevamente.
+        </div>
 
         <form @submit.prevent="handleLogin" novalidate>
           <div class="mb-3">
@@ -39,6 +42,10 @@
             />
             <div v-if="errors.password" class="invalid-feedback">{{ errors.password }}</div>
           </div>
+
+          <p class="text-end mb-3">
+            <RouterLink to="/forgot-password">¿Olvidaste tu contraseña?</RouterLink>
+          </p>
 
           <div v-if="apiError" class="alert alert-danger py-2" role="alert">
             {{ apiError }}

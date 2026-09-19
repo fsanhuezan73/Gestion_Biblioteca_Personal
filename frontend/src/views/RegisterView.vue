@@ -83,6 +83,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { newPasswordError } from '@/utils/password'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -105,8 +106,8 @@ function validate() {
     errors.email = 'Ingresa un correo electrónico válido'
     valid = false
   }
-  if (!form.password || form.password.length < 8) {
-    errors.password = 'La contraseña debe tener al menos 8 caracteres'
+  if (newPasswordError(form.password)) {
+    errors.password = newPasswordError(form.password)
     valid = false
   }
   if (form.password !== form.confirmPassword) {

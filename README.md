@@ -76,7 +76,15 @@ Ejecuta el SQL de inicialización:
 @backend/sql/003_add_cover_url.sql
 @backend/sql/004_add_reading_status.sql
 @backend/sql/005_add_personal_reviews.sql
+@backend/sql/006_add_password_recovery.sql
 ```
+
+Para instalaciones existentes con 001–005 aplicadas, ejecutar **solo** la
+migración `006_add_password_recovery.sql`, primero en un esquema de pruebas y
+después en el esquema real con respaldo y aprobación. No se aplica al iniciar
+la aplicación. Oracle confirma DDL implícitamente, por lo que `ROLLBACK` no
+deshace la migración. El backend de autenticación nuevo requiere esta migración
+antes de desplegarse.
 
 #### 3) Backend
 
@@ -220,3 +228,22 @@ implícitamente; un `ROLLBACK` no elimina las columnas creadas.
 
 El worktree aísla el código, no Oracle: usar un esquema de pruebas y puertos
 distintos a los del checkout principal. Ver [validación de la funcionalidad](docs/valoraciones-notas.md).
+
+## Correo de recuperación de contraseña (preparación)
+
+El backend permite configurar un servidor SMTP con STARTTLS o SSL implícito.
+Completar en `backend/.env` los valores `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` y
+`FRONTEND_BASE_URL` (ver `backend/.env.example`). Usar una cuenta de envío
+dedicada y guardar las credenciales solo como secretos del entorno; no
+versionarlas. La URL se construye desde `FRONTEND_BASE_URL`, nunca desde el
+encabezado `Host` de la petición. En producción se exige HTTPS; HTTP solo se
+acepta para `localhost` o `127.0.0.1` en desarrollo.
+
+Ver [validación y pasos pendientes de activación](docs/password-recovery-validation.md).
+
+Mantener `PASSWORD_RESET_ENABLED=false` hasta que la migración 006 esté aplicada,
+la vista frontend `/reset-password` exista y se haya probado el envío con el
+proveedor elegido. La configuración y las pruebas actuales no envían correos
+reales. Cuando se habilite, el endpoint de solicitud siempre responderá con un
+mensaje genérico; los errores SMTP se registran sin dirección ni token.

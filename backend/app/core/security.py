@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.config import get_settings
+from app.db.session import get_db_connection
 
 settings = get_settings()
 
@@ -45,13 +46,33 @@ def decode_access_token(token: str) -> dict:
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> int:
-    """Dependency que extrae el user_id del JWT. Inyectar en rutas protegidas."""
+    """Valida la identidad y la versión vigente de autenticación del JWT."""
     payload = decode_access_token(token)
-    user_id: int | None = payload.get("sub")
-    if user_id is None:
+    try:
+        user_id = int(payload["sub"])
+        token_version = payload["auth_version"]
+    except (KeyError, TypeError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token sin identidad de usuario",
+            detail="Token inválido o sesión expirada",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return int(user_id)
+    if user_id <= 0 or type(token_version) is not int or token_version < 0:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o sesión expirada",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT auth_version FROM users WHERE id = :user_id", {"user_id": user_id})
+        row = cursor.fetchone()
+
+    if row is None or row[0] != token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o sesión expirada",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user_id
