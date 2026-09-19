@@ -1,9 +1,10 @@
-# Recuperación de contraseña: validación y activación pendiente
+# Recuperación de contraseña: validación y activación
 
-Estado al 19-09-2026: código implementado en el `development` local, aún
-sin commit ni despliegue. La migración 006 está aplicada y verificada tanto
-en `BIBLIOTECA_TEST` como en `BIBLIOTECA_PERSONAL`. La recuperación permanece
-desactivada en el servicio publicado.
+Estado al 19-09-2026: código integrado mediante PR #9, desplegado en Render
+y Vercel, con `main` y `development` sincronizadas. La migración 006 está
+aplicada y verificada tanto en `BIBLIOTECA_TEST` como en
+`BIBLIOTECA_PERSONAL`. La recuperación está activada en Render; queda una
+prueba manual del flujo publicado con una cuenta propia existente.
 
 ## Verificación local realizada
 
@@ -65,9 +66,10 @@ con envíos reales a Mailtrap Sandbox y a Zoho mediante Brevo.
    Completado y verificado. Desplegar el backend que usa `AUTH_VERSION`
    **después** de la migración. Los JWT anteriores, que no incluyen este
    claim, exigirán nuevo login.
-6. Desplegar frontend, verificar la ruta `/reset-password`, TLS, política
-   `no-referrer` y la configuración SMTP. Solo entonces activar
-   `PASSWORD_RESET_ENABLED=true` y repetir una prueba controlada.
+6. ~~Desplegar frontend y backend, verificar la ruta `/reset-password`, TLS,
+   política `no-referrer`, configurar SMTP en Render y activar
+   `PASSWORD_RESET_ENABLED=true`.~~ Completado. Falta la prueba controlada
+   de entrega y consumo desde el sitio público con una cuenta registrada.
 
 No habilitar la recuperación si falla la verificación de esquema, entrega de
 correo o URL del enlace. La tarea de correo en segundo plano es local al
@@ -137,14 +139,14 @@ dominio y ambiente de prueba. Ese envío requerirá autorización específica.
   `4b06f4fd2bf2d426f7a42e9cb0e84dd081d6b9d5c6d57af4713ca5387fac1106`.
   **No se ha probado una restauración**; el directorio contiene datos y hashes
   de contraseñas, y nunca debe subirse a Git.
-- El manifiesto local `render.yaml` ahora declara
+- El manifiesto `render.yaml` ahora declara
   `PASSWORD_RESET_ENABLED`, `FRONTEND_BASE_URL` y las variables `SMTP_*` sin
   incluir secretos. `FRONTEND_BASE_URL` apunta a
   `https://gestion-biblioteca-personal.vercel.app`. Render ignora `sync: false`
   al actualizar un Blueprint existente, por lo que las claves y el interruptor
-  deben cargarse manualmente en el Dashboard. La API pública identificada es
-  `https://biblioteca-personal-api.onrender.com`; antes del nuevo despliegue
-  no exponía las rutas de recuperación. No se ha activado la recuperación.
+  se configuraron individualmente por la API de Render, preservando las
+  variables previas. La API pública es
+  `https://biblioteca-personal-api.onrender.com`.
 
 ### Secuencia de despliegue y activación
 
@@ -161,15 +163,14 @@ dominio y ambiente de prueba. Ese envío requerirá autorización específica.
 4. ~~Comparar columnas, dos tablas, restricciones e índices con `BIBLIOTECA_TEST`;
    verificar `AUTH_VERSION=0` para los usuarios previos y que las seis tablas
    originales conserven sus filas del respaldo.~~ Completado.
-5. Solo tras esa verificación, desplegar el backend nuevo y después el
-   frontend. Configurar URL pública, SMTP real y remitente verificado en
-   Render; mantener el interruptor apagado hasta comprobar conectividad y
-   entrega externa. Los JWT emitidos por el backend anterior requerirán nuevo
-   inicio de sesión porque no contienen `auth_version`.
-6. Activar `PASSWORD_RESET_ENABLED=true` y hacer una prueba controlada con
-   una cuenta real autorizada. Confirmar recepción, uso único, vencimiento,
-   revocación de sesiones y ausencia de secretos en logs; luego revisar el
-   estado y los límites del proveedor de correo.
+5. ~~Solo tras esa verificación, desplegar el backend nuevo y después el
+   frontend, y configurar URL pública, SMTP real y remitente verificado en
+   Render.~~ Completado. Los JWT emitidos por el backend anterior requieren
+   nuevo inicio de sesión porque no contienen `auth_version`.
+6. ~~Activar `PASSWORD_RESET_ENABLED=true`.~~ Completado. Resta una prueba
+   manual controlada con una cuenta existente desde el sitio público:
+   confirmar recepción, uso único y revocación de sesión; revisar estado y
+   límites del proveedor. No compartir ni registrar el enlace/token.
 
 ## Migración real y prueba Brevo (19-09-2026)
 
@@ -191,7 +192,25 @@ dominio y ambiente de prueba. Ese envío requerirá autorización específica.
   comprobación contra el respaldo confirmó que las filas previas del esquema
   de pruebas siguen intactas. El propietario confirmó la recepción del correo
   concreto de este flujo en Zoho.
-- Backend: 78 pruebas aprobadas. Frontend: 22 pruebas y build aprobados.
-  `render.yaml` está preparado localmente; sus valores aún no se aplicaron
-  al servicio. La última revisión de frontend publicada que registra GitHub
-  antecede al código de recuperación no confirmado en Git.
+- Backend: 78 pruebas aprobadas. Frontend: 22 pruebas, lint y build aprobados.
+
+## Despliegue y activación publicados (19-09-2026)
+
+- PR #9 fusionado en `main`; `main` y `development` quedaron en
+  `f24c65858db0bf0a937aa5bd25ad762f5db6f680`. Vercel confirmó el
+  despliegue de producción y el bundle de la URL estable contiene las rutas
+  `/forgot-password` y `/reset-password`. La API pública expone solicitud,
+  confirmación y cambio autenticado de contraseña.
+- El servicio Render `srv-daiaa5jm8hqs73bijn7g` despliega la rama `main`.
+  Sus ocho variables nuevas se configuraron individualmente, preservando las
+  existentes; ningún secreto se versionó ni se imprimió. El primer despliegue
+  quedó `live` con `PASSWORD_RESET_ENABLED=false` y la API respondió `503`.
+  El segundo quedó `live` con el interruptor en `true` y la API respondió
+  `200` con el mensaje genérico para una dirección inexistente.
+- Se confirmó que esa dirección no pertenecía a ninguna cuenta y se eliminó
+  exclusivamente su solicitud sintética. La verificación Oracle posterior
+  confirmó la migración completa, tablas nuevas vacías y todas las filas
+  originales idénticas al respaldo.
+- La aceptación HTTP no demuestra todavía que el proceso publicado entregue
+  el enlace a una cuenta real: esa comprobación requiere la prueba manual
+  pendiente con una cuenta registrada y correo accesible.
