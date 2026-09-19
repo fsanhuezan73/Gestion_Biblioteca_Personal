@@ -43,4 +43,44 @@ describe('auth store', () => {
     expect(localStorage.getItem('auth_token')).toBeNull()
     expect(localStorage.getItem('auth_user')).toBeNull()
   })
+
+  it('requests a reset without storing or exposing a token', async () => {
+    const postMock = vi.spyOn(api, 'post').mockResolvedValue({ data: { detail: 'Solicitud recibida' } })
+    const store = useAuthStore()
+    const result = await store.requestPasswordReset('user@example.com')
+
+    expect(postMock).toHaveBeenCalledWith('/auth/password-reset/request', { email: 'user@example.com' })
+    expect(result.detail).toBe('Solicitud recibida')
+    expect(store.token).toBeNull()
+  })
+
+  it('clears the previous session after a successful reset', async () => {
+    const postMock = vi.spyOn(api, 'post').mockResolvedValue({ data: { detail: 'Actualizada' } })
+    const store = useAuthStore()
+    store.token = 'old-token'
+    localStorage.setItem('auth_token', 'old-token')
+
+    await store.confirmPasswordReset('reset-secret', 'new-password')
+
+    expect(postMock).toHaveBeenCalledWith('/auth/password-reset/confirm', {
+      token: 'reset-secret', new_password: 'new-password',
+    })
+    expect(store.token).toBeNull()
+    expect(localStorage.getItem('auth_token')).toBeNull()
+  })
+
+  it('clears the session after a successful account password change', async () => {
+    const postMock = vi.spyOn(api, 'post').mockResolvedValue({ data: { detail: 'Actualizada' } })
+    const store = useAuthStore()
+    store.token = 'old-token'
+    localStorage.setItem('auth_token', 'old-token')
+
+    await store.changePassword('current-password', 'new-password')
+
+    expect(postMock).toHaveBeenCalledWith('/auth/password/change', {
+      current_password: 'current-password', new_password: 'new-password',
+    })
+    expect(store.token).toBeNull()
+    expect(localStorage.getItem('auth_token')).toBeNull()
+  })
 })

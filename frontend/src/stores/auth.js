@@ -20,6 +20,29 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
+  async function requestPasswordReset(email) {
+    const { data } = await api.post('/auth/password-reset/request', { email })
+    return data
+  }
+
+  async function confirmPasswordReset(resetToken, newPassword) {
+    const { data } = await api.post('/auth/password-reset/confirm', {
+      token: resetToken,
+      new_password: newPassword,
+    })
+    logout()
+    return data
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    const { data } = await api.post('/auth/password/change', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+    logout()
+    return data
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -27,5 +50,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('auth_user')
   }
 
-  return { token, user, isAuthenticated, register, login, logout }
+  return {
+    token, user, isAuthenticated, register, login, logout,
+    requestPasswordReset, confirmPasswordReset, changePassword,
+  }
 })

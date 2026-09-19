@@ -113,6 +113,10 @@ h1, h2, h3, .display-font {
   border-radius: 1.25rem;
 }
 
+.account-card {
+  max-width: 560px;
+}
+
 .auth-logo {
   display: grid;
   width: 3.5rem;
