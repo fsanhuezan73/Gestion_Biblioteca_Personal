@@ -22,7 +22,7 @@ Añade estas variables de entorno en Render:
 
 ```env
 APP_ENV=production
-ALLOWED_ORIGINS=https://tu-frontend.vercel.app
+ALLOWED_ORIGINS=https://biblioteca-personal.site
 ORACLE_USER=tu_usuario
 ORACLE_PASSWORD=tu_password
 ORACLE_DSN=tu_dsn
@@ -36,7 +36,8 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 ### Importante
 - `ALLOWED_ORIGINS` debe incluir exactamente el dominio público del frontend en Vercel.
-- Si usas un dominio propio de Vercel, pon ese valor.
+- El dominio canónico de producción es `https://biblioteca-personal.site`.
+- `https://www.biblioteca-personal.site` redirige al dominio canónico.
 - Si tu app se sirve desde `https://<proyecto>.vercel.app`, usa ese valor.
 - Render no puede leer una ruta de tu Mac. Deja `ORACLE_WALLET_DIR` vacío y define
 	`ORACLE_WALLET_BASE64` con el ZIP del wallet codificado en Base64.
@@ -83,8 +84,8 @@ Tu entorno local sigue funcionando porque:
 
 ## 6) URL pública esperada
 
-- Frontend: `https://tu-proyecto.vercel.app`
-- Backend: `https://tu-api.onrender.com/docs`
+- Frontend: `https://biblioteca-personal.site`
+- Backend: `https://biblioteca-personal-api.onrender.com/docs`
 
 ## 7) Si falla algo
 
