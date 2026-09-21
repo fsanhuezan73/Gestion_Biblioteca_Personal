@@ -34,7 +34,7 @@ services:
       - key: PASSWORD_RESET_ENABLED
         sync: false
       - key: FRONTEND_BASE_URL
-        value: https://gestion-biblioteca-personal.vercel.app
+        value: https://biblioteca-personal.site
       - key: SMTP_HOST
         value: smtp-relay.brevo.com
       - key: SMTP_PORT

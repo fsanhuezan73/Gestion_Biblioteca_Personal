@@ -214,3 +214,17 @@ dominio y ambiente de prueba. Ese envío requerirá autorización específica.
 - La aceptación HTTP no demuestra todavía que el proceso publicado entregue
   el enlace a una cuenta real: esa comprobación requiere la prueba manual
   pendiente con una cuenta registrada y correo accesible.
+
+## Dominio público personalizado (20-09-2026)
+
+- `https://biblioteca-personal.site` quedó asociado al despliegue de producción
+  de Vercel y `https://www.biblioteca-personal.site` redirige de forma
+  permanente al dominio canónico.
+- Render acepta tanto el dominio canónico como la URL anterior de Vercel en
+  `ALLOWED_ORIGINS` durante el período de transición. El preflight desde el
+  dominio canónico respondió con el origen exacto esperado.
+- `FRONTEND_BASE_URL` se actualizó en Render y en `render.yaml` a
+  `https://biblioteca-personal.site`. Las solicitudes de recuperación futuras
+  deben generar enlaces con ese dominio.
+- La validación controlada desde el dominio canónico completó correctamente la
+  recepción del correo y el flujo de recuperación, sin incidencias.
