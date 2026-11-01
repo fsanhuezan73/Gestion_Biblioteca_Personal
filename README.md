@@ -205,7 +205,6 @@ npm run build
 - [x] Build de frontend validada
 - [x] Documentación de arranque actualizada
 
-
 ## Valoraciones y notas personales
 
 Desde la ficha de cada libro puedes guardar una valoración opcional de **1 a 5
