@@ -77,6 +77,7 @@ Ejecuta el SQL de inicialización:
 @backend/sql/004_add_reading_status.sql
 @backend/sql/005_add_personal_reviews.sql
 @backend/sql/006_add_password_recovery.sql
+@backend/sql/007_add_reading_stats.sql
 ```
 
 Para instalaciones existentes con 001–005 aplicadas, ejecutar **solo** la
@@ -157,6 +158,8 @@ Gestion_Biblioteca_Personal/
 | `GET` | `/api/v1/books/{id}` | Detalle de libro | ✅ |
 | `PUT` | `/api/v1/books/{id}` | Editar libro | ✅ |
 | `DELETE` | `/api/v1/books/{id}` | Eliminar libro | ✅ |
+| `GET` | `/api/v1/stats/?year=2026` | Estadísticas del año y de la biblioteca | ✅ |
+| `GET/PUT/DELETE` | `/api/v1/goals/{year}` | Meta anual de lectura | ✅ |
 | `GET` | `/health` | Health check del backend | No |
 | `GET` | `/health/db` | Ejecuta SQL en Oracle (keepalive diario, ver DEPLOY.md) | Header `X-Health-Token` |
 
@@ -247,3 +250,21 @@ la vista frontend `/reset-password` exista y se haya probado el envío con el
 proveedor elegido. La configuración y las pruebas actuales no envían correos
 reales. Cuando se habilite, el endpoint de solicitud siempre responderá con un
 mensaje genérico; los errores SMTP se registran sin dirección ni token.
+
+## Estadísticas y metas de lectura
+
+La página **📊 Estadísticas** (`/stats`) muestra la meta anual con su ritmo,
+libros y páginas leídos por año, libros por mes, géneros, valoraciones, autores
+más leídos y libros en curso. Cada libro guarda fecha de inicio, fecha de
+término y número de páginas (autocompletado por ISBN desde Open Library).
+
+Fechas automáticas al cambiar el estado (siempre editables): «Leyendo» fija el
+inicio en hoy si falta y borra el término; «Leído» fija el término en hoy si
+falta, sin inventar el inicio; «Quiero leer» borra ambas. Los libros leídos sin
+fecha de término cuentan en los totales, pero no en el año ni en la meta.
+
+**Base de datos:** para una instalación con 001–006 aplicadas, ejecutar solo
+`backend/sql/007_add_reading_stats.sql`, primero en un esquema de pruebas. La
+migración es aditiva (columnas opcionales y tabla nueva): el backend anterior
+sigue funcionando, por lo que debe aplicarse **antes** de desplegar este código.
+Ver [validación de la funcionalidad](docs/estadisticas-metas.md).
