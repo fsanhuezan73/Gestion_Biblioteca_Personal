@@ -1,0 +1,57 @@
+name: Oracle keepalive
+
+# Oracle Always Free detiene la Autonomous Database tras 7 días sin
+# conexiones que ejecuten SQL. Este workflow llama a diario a /health/db,
+# que ejecuta `SELECT 1 FROM DUAL`. Si falla, GitHub notifica por correo.
+#
+# Configuración requerida (Settings → Secrets and variables → Actions):
+#   - Variable HEALTHCHECK_URL: URL completa, p. ej. https://<api>.onrender.com/health/db
+#   - Secret   HEALTHCHECK_TOKEN: mismo valor que HEALTHCHECK_TOKEN en Render
+
+on:
+  schedule:
+    - cron: "17 9 * * *" # todos los días 09:17 UTC (≈ 06:17 hora de Chile)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracle-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ejecutar SQL en Oracle vía /health/db
+        env:
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+        run: |
+          if [ -z "$HEALTHCHECK_URL" ] || [ -z "$HEALTHCHECK_TOKEN" ]; then
+            echo "::error::Faltan la variable HEALTHCHECK_URL o el secret HEALTHCHECK_TOKEN."
+            exit 1
+          fi
+
+          # Render (plan free) puede tardar ~1 minuto en despertar: reintentar.
+          for attempt in 1 2 3 4 5; do
+            status=$(curl -sS -o response.json -w '%{http_code}' \
+              --max-time 120 \
+              -H "X-Health-Token: ${HEALTHCHECK_TOKEN}" \
+              "$HEALTHCHECK_URL" || echo "000")
+            echo "Intento ${attempt}: HTTP ${status} $(cat response.json 2>/dev/null)"
+            if [ "$status" = "200" ]; then
+              echo "Oracle respondió correctamente; contador de inactividad reiniciado."
+              exit 0
+            fi
+            if [ "$status" = "401" ] || [ "$status" = "404" ]; then
+              echo "::error::Token inválido o endpoint deshabilitado (HTTP ${status}). Revisar HEALTHCHECK_TOKEN en Render y GitHub."
+              exit 1
+            fi
+            sleep 30
+          done
+
+          echo "::error::La base de datos no respondió. Revisar en OCI si la Autonomous Database está detenida."
+          exit 1

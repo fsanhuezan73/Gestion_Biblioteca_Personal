@@ -95,3 +95,35 @@ Revisa:
 - que `VITE_API_URL` apunte al backend real
 - que Oracle acepte conexiones desde Render
 - que `JWT_SECRET_KEY` esté definido
+
+## Keepalive de Oracle Always Free
+
+Oracle detiene una Autonomous Database Always Free tras **7 días** sin
+conexiones que ejecuten SQL (y la elimina tras 90 días detenida). El workflow
+[`.github/workflows/oracle-keepalive.yml`](.github/workflows/oracle-keepalive.yml)
+llama todos los días a `GET /health/db`, que ejecuta `SELECT 1 FROM DUAL`.
+Las credenciales de Oracle permanecen solo en Render.
+
+Activación (una sola vez):
+
+1. Generar un token sin mostrarlo en pantalla:
+
+   ```bash
+   openssl rand -hex 32 | pbcopy
+   ```
+
+2. En Render → servicio `biblioteca-personal-api` → Environment, crear
+   `HEALTHCHECK_TOKEN` con ese valor y redesplegar. Sin token el endpoint
+   responde 404.
+3. En GitHub → Settings → Secrets and variables → Actions:
+   - Secret `HEALTHCHECK_TOKEN`: el mismo valor.
+   - Variable `HEALTHCHECK_URL`: `https://<tu-api>.onrender.com/health/db`.
+4. En la pestaña Actions, ejecutar **Oracle keepalive** con *Run workflow* y
+   verificar `HTTP 200`.
+
+Si la base no responde, el workflow falla y GitHub envía un correo: iniciar la
+base en OCI. GitHub desactiva los workflows programados de repos públicos
+tras 60 días sin actividad en el repositorio (avisa por correo antes); cualquier
+commit reinicia ese plazo. Como respaldo opcional se puede configurar un
+monitor externo (p. ej. cron-job.org) contra la misma URL con el header
+`X-Health-Token`.
