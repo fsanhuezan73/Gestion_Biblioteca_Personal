@@ -66,7 +66,10 @@ const chartOptions = computed(() => {
     border: { display: false },
   }
   const categoryAxis = {
-    ticks: { color: MUTED },
+    // Etiquetas horizontales también en celular (12 meses caben a 10px).
+    ticks: props.horizontal
+      ? { color: MUTED }
+      : { color: MUTED, maxRotation: 0, autoSkip: false, font: { size: 10 } },
     grid: { display: false },
     border: { color: GRID },
   }

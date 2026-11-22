@@ -31,9 +31,13 @@
 
         <div v-if="library.read_without_date" class="alert alert-info d-flex flex-wrap align-items-center gap-2" data-test="undated-alert">
           <span>
-            ℹ️ {{ library.read_without_date }}
-            {{ library.read_without_date === 1 ? 'libro leído no tiene' : 'libros leídos no tienen' }}
-            fecha de término y no cuentan en las estadísticas del año.
+            <span aria-hidden="true" class="me-1">ℹ️</span>
+            <template v-if="library.read_without_date === 1">
+              1 libro leído no tiene fecha de término y no cuenta en las estadísticas del año.
+            </template>
+            <template v-else>
+              {{ library.read_without_date }} libros leídos no tienen fecha de término y no cuentan en las estadísticas del año.
+            </template>
           </span>
           <RouterLink :to="{ name: 'Library', query: { sin_fecha: '1' } }" class="btn btn-sm btn-outline-primary">
             Completar fechas

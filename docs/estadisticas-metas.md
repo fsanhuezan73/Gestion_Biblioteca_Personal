@@ -28,3 +28,22 @@
 
 Oracle confirma DDL implícitamente: un `ROLLBACK` no deshace la migración.
 No volver a ejecutarla en un esquema donde ya esté aplicada.
+
+## Validación en BIBLIOTECA_TEST (22 de noviembre de 2026)
+
+- `SESSION_USER` y `CURRENT_SCHEMA` confirmados como `BIBLIOTECA_TEST`, con
+  001–006 aplicadas y 007 ausente.
+- Respaldo lógico privado (JSON de todas las tablas y recuentos) fuera de Git en
+  `~/Backups/BibliotecaPersonal/20261122T185014Z-test-before-007/`.
+- Migración 007 aplicada completa (9 sentencias). Recuentos de las tablas
+  existentes sin cambios.
+- Backend local contra el esquema de pruebas: 24/24 comprobaciones de API
+  (fechas automáticas y explícitas, validaciones, filtro sin fecha, metas,
+  estadísticas, aislamiento entre usuarios, año sin datos).
+- Navegador: biblioteca con indicador de meta, panel de estadísticas en
+  escritorio y móvil, ficha con fechas y días de lectura, formulario de edición.
+  Sin errores en consola.
+- Se crearon dos cuentas de validación (`validacion-007-*@validacion-biblioteca.com`)
+  y tres libros «VALIDACIÓN 007 — …» en `BIBLIOTECA_TEST`.
+
+Pendiente: respaldar y aplicar 007 en `BIBLIOTECA_PERSONAL` antes de mergear a `main`.

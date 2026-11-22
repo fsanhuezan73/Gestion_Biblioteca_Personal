@@ -68,7 +68,7 @@
           <span v-if="goal.remaining">Faltan {{ goal.remaining }}</span>
         </div>
         <p class="mb-0 small goal-status" :data-status="goal.status">
-          <span aria-hidden="true">{{ statusInfo.icon }}</span> {{ statusInfo.text }}
+          <span aria-hidden="true" class="me-1">{{ statusInfo.icon }}</span>{{ statusInfo.text }}
         </p>
       </template>
       <p v-else-if="!editing" class="text-muted small mb-0">
