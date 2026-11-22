@@ -27,3 +27,15 @@ describe('guardar valoración y notas', () => {
     expect(store.books[0].rating).toBe(3)
   })
 })
+
+describe('subir portada', () => {
+  it('envía la imagen como cuerpo binario y devuelve la URL absoluta', async () => {
+    const store = useBooksStore()
+    const blob = { type: 'image/jpeg', size: 10 }
+    const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 'abc123' } })
+    const url = await store.uploadCover(blob)
+    expect(post).toHaveBeenCalledWith('/covers', blob, { headers: { 'Content-Type': 'image/jpeg' } })
+    expect(url).toBe(new URL(`${api.defaults.baseURL}/covers/abc123`, window.location.origin).href)
+    expect(url).toMatch(/^https?:\/\/.+\/covers\/abc123$/)
+  })
+})

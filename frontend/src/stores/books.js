@@ -78,5 +78,12 @@ export const useBooksStore = defineStore('books', () => {
     books.value = books.value.filter((b) => b.id !== id)
   }
 
-  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, checkIsbn, lookupIsbn, deleteBook }
+  // Sube la imagen (cuerpo binario) y devuelve la URL absoluta para cover_url.
+  async function uploadCover(blob) {
+    const { data } = await api.post('/covers', blob, { headers: { 'Content-Type': blob.type || 'image/jpeg' } })
+    const base = api.defaults.baseURL.replace(/\/+$/, '')
+    return new globalThis.URL(`${base}/covers/${data.id}`, globalThis.location.origin).href
+  }
+
+  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, checkIsbn, lookupIsbn, deleteBook, uploadCover }
 })
