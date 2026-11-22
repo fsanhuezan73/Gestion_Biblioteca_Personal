@@ -54,6 +54,15 @@
           placeholder="Ej: 978-84-450-7747-2"
         />
         <button
+          v-if="allowScan"
+          type="button"
+          class="btn btn-outline-primary"
+          data-test="open-scanner"
+          @click="showScanner = true"
+        >
+          📷 Escanear
+        </button>
+        <button
           type="button"
           class="btn btn-outline-secondary"
           :disabled="isbnSearching || !form.isbn?.trim()"
@@ -71,7 +80,16 @@
       >
         {{ isbnAlert.text }}
       </div>
+      <div v-if="duplicates.length" class="alert alert-warning mt-2 py-2 small mb-0" role="alert" data-test="duplicate-alert">
+        ⚠️ Ya tienes este libro en tu biblioteca:
+        <template v-for="(dup, i) in duplicates" :key="dup.id">
+          <RouterLink :to="`/books/${dup.id}`" class="alert-link">{{ dup.title }}</RouterLink><span v-if="i < duplicates.length - 1">, </span>
+        </template>.
+        Puedes guardarlo igual si tienes otro ejemplar.
+      </div>
     </div>
+
+    <BarcodeScanner v-if="showScanner" @detected="handleScanned" @close="showScanner = false" />
 
     <!-- Portada autocomplete preview -->
     <div v-if="form.cover_url" class="mb-3 text-center">
@@ -196,7 +214,9 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { defineAsyncComponent, onMounted, reactive, ref, watch } from 'vue'
+import { useBooksStore } from '@/stores/books'
+import { toIsbn13 } from '@/utils/isbn'
 import { datesForStatus, readingDatesError, todayISO } from '@/utils/dates'
 
 const props = defineProps({
@@ -204,7 +224,36 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   apiError: { type: String, default: '' },
   submitLabel: { type: String, default: 'Guardar' },
+  // Escáner de código de barras (solo al añadir libros).
+  allowScan: { type: Boolean, default: false },
+  autoScan: { type: Boolean, default: false },
 })
+
+// El escáner (y su lector WebAssembly) se carga solo al abrirlo.
+const BarcodeScanner = defineAsyncComponent(() => import('./BarcodeScanner.vue'))
+const booksStore = useBooksStore()
+const showScanner = ref(false)
+const duplicates = ref([])
+
+onMounted(() => {
+  if (props.allowScan && props.autoScan) showScanner.value = true
+})
+
+function handleScanned(isbn) {
+  showScanner.value = false
+  form.isbn = isbn
+  searchByISBN()
+}
+
+async function checkDuplicates(rawIsbn) {
+  duplicates.value = []
+  const isbn = toIsbn13(rawIsbn)
+  if (!props.allowScan || !isbn) return
+  try {
+    const result = await booksStore.checkIsbn(isbn)
+    if (form.isbn && toIsbn13(form.isbn) === isbn) duplicates.value = result.books
+  } catch { /* la comprobación es solo informativa */ }
+}
 
 const emit = defineEmits(['submit'])
 
@@ -264,6 +313,7 @@ async function searchByISBN() {
   if (!form.isbn?.trim()) return
   isbnSearching.value = true
   isbnAlert.value = null
+  checkDuplicates(form.isbn)
   try {
     const isbn = form.isbn.trim().replace(/[-\s]/g, '')
 

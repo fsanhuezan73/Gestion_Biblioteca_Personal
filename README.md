@@ -158,6 +158,7 @@ Gestion_Biblioteca_Personal/
 | `GET` | `/api/v1/books/{id}` | Detalle de libro | ✅ |
 | `PUT` | `/api/v1/books/{id}` | Editar libro | ✅ |
 | `DELETE` | `/api/v1/books/{id}` | Eliminar libro | ✅ |
+| `GET` | `/api/v1/books/check-isbn?isbn=` | ¿Ya tengo este ISBN? (ignora guiones, acepta ISBN-10) | ✅ |
 | `GET` | `/api/v1/stats/?year=2026` | Estadísticas del año y de la biblioteca | ✅ |
 | `GET/PUT/DELETE` | `/api/v1/goals/{year}` | Meta anual de lectura | ✅ |
 | `GET` | `/health` | Health check del backend | No |
@@ -268,3 +269,23 @@ fecha de término cuentan en los totales, pero no en el año ni en la meta.
 migración es aditiva (columnas opcionales y tabla nueva): el backend anterior
 sigue funcionando, por lo que debe aplicarse **antes** de desplegar este código.
 Ver [validación de la funcionalidad](docs/estadisticas-metas.md).
+
+## Escanear el código de barras
+
+En **Añadir libro** (o con **📷 Escanear** en la barra de la biblioteca) se abre
+la cámara trasera; al leer el EAN-13 del libro (978/979) se completa el ISBN,
+se buscan los datos en Open Library y se avisa si el libro ya está en tu
+biblioteca. Incluye cambio de cámara, linterna (si el equipo la soporta) y
+lectura desde una foto. Las imágenes se procesan solo en el navegador.
+
+- Lector: `BarcodeDetector` nativo si soporta EAN-13; si no (Safari/iPhone,
+  Firefox), ZXing en WebAssembly (`barcode-detector` + `zxing-wasm`), servido
+  desde la propia app y cargado solo al abrir el escáner.
+- La cámara exige HTTPS (o `localhost`). Para probar desde un celular en la
+  misma red: `npm run dev:mobile` (certificado local; aceptar la advertencia
+  del navegador) y abrir la dirección «Network» que muestra Vite. La API se
+  consulta por el proxy `/api` (`VITE_PROXY_TARGET`, por defecto el backend en
+  `127.0.0.1:8000`).
+- Pruebas E2E: `tests/e2e/barcode-scanner.spec.js` usa una cámara falsa de
+  Chrome que muestra un código EAN-13 generado en la prueba (modo nativo y
+  WebAssembly).

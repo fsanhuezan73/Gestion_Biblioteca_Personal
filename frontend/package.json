@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "VITE_DEV_HTTPS=1 VITE_API_URL=/api/v1 vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .js,.vue",
@@ -15,16 +16,19 @@
   },
   "dependencies": {
     "axios": "^1.7.9",
+    "barcode-detector": "3.2.3",
     "bootstrap": "^5.3.3",
     "chart.js": "^4.6.1",
     "pinia": "^2.3.0",
     "vue": "^3.5.13",
     "vue-chartjs": "^5.3.7",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "zxing-wasm": "3.1.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
+    "@vitejs/plugin-basic-ssl": "2.3.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitest/coverage-v8": "^4.1.11",
     "@vue/test-utils": "^2.4.11",
