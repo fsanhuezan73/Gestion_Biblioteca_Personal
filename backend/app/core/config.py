@@ -31,6 +31,8 @@ class Settings(BaseSettings):
 
     allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
     app_env: str = "development"
+    # Zona horaria para "hoy" (fechas automáticas de lectura y metas).
+    app_timezone: str = "America/Santiago"
 
     class Config:
         env_file = (str(BASE_DIR / ".env"), ".env", "backend/.env")

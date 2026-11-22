@@ -19,6 +19,10 @@
         </h6>
         <p class="card-text text-muted small mb-2 text-truncate">{{ book.authors?.join(', ') }}</p>
         <div class="mb-2"><BookRating :rating="book.rating" /></div>
+        <p v-if="reading" class="small mb-2 reading-line" :class="{ 'text-muted': reading.missing }" data-test="reading-summary">
+          <span class="reading-label">{{ reading.label }}:</span> {{ reading.date }}
+          <span v-if="reading.days" class="text-muted">· {{ reading.days }}</span>
+        </p>
         <div class="mt-auto d-flex gap-1 flex-wrap">
           <span v-if="book.genre" class="badge genre-badge">
             {{ book.genre }}
@@ -35,10 +39,13 @@
 <script setup>
 import { computed } from 'vue'
 import BookRating from './BookRating.vue'
+import { readingSummary } from '@/utils/dates'
 
 const props = defineProps({
   book: { type: Object, required: true },
 })
+
+const reading = computed(() => readingSummary(props.book))
 
 const statusBadgeClass = computed(() => {
   switch (props.book.reading_status) {
@@ -81,6 +88,12 @@ const statusBadgeClass = computed(() => {
 .book-placeholder {
   font-size: 3.5rem;
   opacity: 0.8;
+}
+.reading-line {
+  color: var(--ink);
+}
+.reading-label {
+  color: var(--muted);
 }
 .genre-badge {
   color: #465273;

@@ -7,5 +7,6 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:5173',
     headless: true,
     trace: 'on-first-retry',
+    testIdAttribute: 'data-test',
   },
 })
