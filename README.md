@@ -158,6 +158,7 @@ Gestion_Biblioteca_Personal/
 | `PUT` | `/api/v1/books/{id}` | Editar libro | ✅ |
 | `DELETE` | `/api/v1/books/{id}` | Eliminar libro | ✅ |
 | `GET` | `/health` | Health check del backend | No |
+| `GET` | `/health/db` | Ejecuta SQL en Oracle (keepalive diario, ver DEPLOY.md) | Header `X-Health-Token` |
 
 ---
 
@@ -204,7 +205,6 @@ npm run build
 - [x] Portadas visibles completas en UX
 - [x] Build de frontend validada
 - [x] Documentación de arranque actualizada
-
 
 ## Valoraciones y notas personales
 
