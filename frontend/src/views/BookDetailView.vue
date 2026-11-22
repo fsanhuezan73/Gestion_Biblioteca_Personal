@@ -54,6 +54,18 @@
           <li v-if="book.isbn" class="list-group-item px-0">
             <strong>ISBN:</strong> {{ book.isbn }}
           </li>
+          <li v-if="book.page_count" class="list-group-item px-0">
+            <strong>Páginas:</strong> {{ book.page_count }}
+          </li>
+          <li v-if="book.started_at" class="list-group-item px-0">
+            <strong>Inicio de lectura:</strong> {{ formatDate(book.started_at) }}
+          </li>
+          <li v-if="book.finished_at" class="list-group-item px-0">
+            <strong>Término de lectura:</strong> {{ formatDate(book.finished_at) }}
+            <span v-if="readingDays !== null" class="text-muted small ms-1">
+              ({{ readingDays }} {{ readingDays === 1 ? 'día' : 'días' }})
+            </span>
+          </li>
         </ul>
 
         <BookPersonalDetails ref="personalDetails" :book="book" @saved="book = $event" />
@@ -83,17 +95,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useBooksStore } from '@/stores/books'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BookPersonalDetails from '@/components/BookPersonalDetails.vue'
+import { daysBetween, formatDate } from '@/utils/dates'
 
 const route = useRoute()
 const router = useRouter()
 const booksStore = useBooksStore()
 
 const book = ref(null)
+const readingDays = computed(() => daysBetween(book.value?.started_at, book.value?.finished_at))
 const loading = ref(true)
 const showModal = ref(false)
 const deleteLoading = ref(false)

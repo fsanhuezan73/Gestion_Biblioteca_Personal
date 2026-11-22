@@ -2,6 +2,7 @@ from oracledb import DB_TYPE_CLOB
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.reading import as_date, dates_for_status_change, today, validate_reading_dates
 from app.core.security import get_current_user
 from app.db.session import get_db_connection
 from app.schemas.book import (
@@ -48,6 +49,36 @@ def _get_or_create_id(cursor, table: str, name: str) -> int:
     return cursor.fetchone()[0]
 
 
+def _ensure_valid_status(status: str | None) -> None:
+    if status is not None and status not in VALID_READING_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Estado inválido. Valores permitidos: {', '.join(VALID_READING_STATUSES)}",
+        )
+
+
+def _ensure_valid_dates(started_at, finished_at) -> None:
+    error = validate_reading_dates(started_at, finished_at, today())
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+
+
+def _fetch_reading_state(cursor, book_id: int, user_id: int):
+    """Estado y fechas actuales de un libro propio y activo, o None."""
+    cursor.execute(
+        """
+        SELECT id, reading_status, started_at, finished_at
+        FROM books
+        WHERE id = :bid AND user_id = :user_id AND deleted_at IS NULL
+        """,
+        {"bid": book_id, "user_id": user_id},
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    return row[1], as_date(row[2]), as_date(row[3])
+
+
 def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
     """Lee un libro completo con JOINs y retorna BookOut o None."""
     cursor.execute(
@@ -62,7 +93,10 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
                b.cover_url,
                b.reading_status,
                b.rating,
-               b.personal_notes
+               b.personal_notes,
+               b.started_at,
+               b.finished_at,
+               b.page_count
         FROM books b
         LEFT JOIN genres     g ON g.id = b.genre_id
         LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -97,6 +131,9 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
         reading_status=row[8],
         rating=row[9],
         personal_notes=row[10].read() if hasattr(row[10], "read") else row[10],
+        started_at=as_date(row[11]),
+        finished_at=as_date(row[12]),
+        page_count=row[13],
         authors=authors,
     )
 
@@ -115,6 +152,7 @@ def list_books(
     search: str | None = Query(None, description="Búsqueda libre en título, autor, ISBN, año, género"),
     genre: str | None = Query(None, description="Filtrar por género exacto"),
     reading_status: str | None = Query(None, description="Filtrar por estado de lectura"),
+    without_finish_date: bool = Query(False, description="Solo libros leídos sin fecha de término"),
 ):
     """HU-02 + HU-05: Retorna libros activos del usuario con búsqueda y filtros."""
     with get_db_connection() as conn:
@@ -131,7 +169,10 @@ def list_books(
                    b.created_at,
                    b.cover_url,
                    b.reading_status,
-                   b.rating
+                   b.rating,
+                   b.started_at,
+                   b.finished_at,
+                   b.page_count
             FROM books b
             LEFT JOIN genres     g ON g.id = b.genre_id
             LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -148,6 +189,9 @@ def list_books(
         if reading_status:
             sql += " AND b.reading_status = :reading_status"
             bind["reading_status"] = reading_status
+
+        if without_finish_date:
+            sql += " AND b.reading_status = 'Leído' AND b.finished_at IS NULL"
 
         # Búsqueda libre: coincidencia parcial en título, autor, ISBN, año, género
         if search:
@@ -186,7 +230,9 @@ def list_books(
             result.append(BookSummary(
                 id=r[0], title=r[1], isbn=r[2], year=r[3],
                 genre=r[4], publisher=r[5], created_at=r[6], cover_url=r[7],
-                reading_status=r[8], rating=r[9], authors=authors,
+                reading_status=r[8], rating=r[9],
+                started_at=as_date(r[10]), finished_at=as_date(r[11]), page_count=r[12],
+                authors=authors,
             ))
     return result
 
@@ -203,6 +249,17 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
         raise HTTPException(status_code=422, detail="El título es obligatorio")
     if not book_in.authors:
         raise HTTPException(status_code=422, detail="Debe indicar al menos un autor")
+    status_value = book_in.reading_status or "Quiero leer"
+    _ensure_valid_status(status_value)
+
+    # Fechas automáticas según el estado inicial; las enviadas explícitamente
+    # (incluso null) tienen prioridad.
+    started_at, finished_at = dates_for_status_change(status_value, None, None, today())
+    if "started_at" in book_in.model_fields_set:
+        started_at = book_in.started_at
+    if "finished_at" in book_in.model_fields_set:
+        finished_at = book_in.finished_at
+    _ensure_valid_dates(started_at, finished_at)
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -222,8 +279,10 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
 
         cursor.execute(
             """
-            INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at, cover_url, reading_status)
-            VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP, :cover_url, :reading_status)
+            INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at, cover_url,
+                               reading_status, started_at, finished_at, page_count)
+            VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP, :cover_url,
+                    :reading_status, :started_at, :finished_at, :page_count)
             """,
             {
                 "user_id": current_user_id,
@@ -233,7 +292,10 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
                 "genre_id": genre_id,
                 "publisher_id": publisher_id,
                 "cover_url": book_in.cover_url,
-                "reading_status": book_in.reading_status or "Quiero leer",
+                "reading_status": status_value,
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "page_count": book_in.page_count,
             },
         )
         cursor.execute(
@@ -306,15 +368,29 @@ def update_book(
 ):
     """HU-03: Actualiza los campos enviados de un libro del usuario."""
     updates = book_in.model_dump(exclude_unset=True)
+    if "reading_status" in updates:
+        if updates["reading_status"] is None:
+            raise HTTPException(status_code=422, detail="El estado de lectura no puede ser nulo")
+        _ensure_valid_status(updates["reading_status"])
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id FROM books WHERE id = :bid AND user_id = :user_id AND deleted_at IS NULL",
-            {"bid": book_id, "user_id": current_user_id},
-        )
-        if not cursor.fetchone():
+        state = _fetch_reading_state(cursor, book_id, current_user_id)
+        if state is None:
             raise HTTPException(status_code=404, detail="Libro no encontrado")
+
+        current_status, current_started, current_finished = state
+        started_at, finished_at = current_started, current_finished
+        new_status = updates.get("reading_status", current_status)
+        if new_status != current_status:
+            started_at, finished_at = dates_for_status_change(
+                new_status, current_started, current_finished, today()
+            )
+        if "started_at" in updates:
+            started_at = updates["started_at"]
+        if "finished_at" in updates:
+            finished_at = updates["finished_at"]
+        _ensure_valid_dates(started_at, finished_at)
 
         # Resolver catálogos (INSERT + catch ORA-00001, sin MERGE)
         genre_id = _UNSET
@@ -349,6 +425,7 @@ def update_book(
             "isbn": {"sql": "UPDATE books SET isbn = :isbn WHERE id = :bid", "param": "isbn"},
             "year": {"sql": "UPDATE books SET year = :pub_year WHERE id = :bid", "param": "pub_year"},
             "cover_url": {"sql": "UPDATE books SET cover_url = :cover_url WHERE id = :bid", "param": "cover_url"},
+            "page_count": {"sql": "UPDATE books SET page_count = :page_count WHERE id = :bid", "param": "page_count"},
             "reading_status": {
                 "sql": "UPDATE books SET reading_status = :reading_status WHERE id = :bid",
                 "param": "reading_status",
@@ -358,6 +435,12 @@ def update_book(
         for field, config in scalar_map.items():
             if field in updates:
                 cursor.execute(config["sql"], {config["param"]: updates[field], "bid": book_id})
+
+        if (started_at, finished_at) != (current_started, current_finished):
+            cursor.execute(
+                "UPDATE books SET started_at = :started_at, finished_at = :finished_at WHERE id = :bid",
+                {"started_at": started_at, "finished_at": finished_at, "bid": book_id},
+            )
 
         if genre_id is not _UNSET:
             cursor.execute(
@@ -455,15 +538,16 @@ def update_reading_status(
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id FROM books WHERE id = :bid AND user_id = :user_id AND deleted_at IS NULL",
-            {"bid": book_id, "user_id": current_user_id},
-        )
-        if not cursor.fetchone():
+        state = _fetch_reading_state(cursor, book_id, current_user_id)
+        if state is None:
             raise HTTPException(status_code=404, detail="Libro no encontrado")
+        current_status, started_at, finished_at = state
+        if new_status != current_status:
+            started_at, finished_at = dates_for_status_change(new_status, started_at, finished_at, today())
         cursor.execute(
-            "UPDATE books SET reading_status = :status WHERE id = :bid",
-            {"status": new_status, "bid": book_id},
+            "UPDATE books SET reading_status = :status, started_at = :started_at, "
+            "finished_at = :finished_at WHERE id = :bid",
+            {"status": new_status, "started_at": started_at, "finished_at": finished_at, "bid": book_id},
         )
         book = _fetch_book_row(cursor, book_id)
     return book

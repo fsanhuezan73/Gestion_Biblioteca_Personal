@@ -101,7 +101,7 @@
     </div>
 
     <!-- Año, Género y Estado en fila -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-3">
       <div class="col-sm-4">
         <label for="year" class="form-label">Año de publicación</label>
         <input
@@ -132,12 +132,58 @@
       </div>
       <div class="col-sm-4">
         <label for="reading_status" class="form-label">Estado de lectura</label>
-        <select id="reading_status" v-model="form.reading_status" class="form-select">
+        <select
+          id="reading_status"
+          v-model="form.reading_status"
+          class="form-select"
+          @change="applyStatusDates"
+        >
           <option value="Quiero leer">📘 Quiero leer</option>
           <option value="Leyendo">📖 Leyendo</option>
           <option value="Leído">✅ Leído</option>
         </select>
       </div>
+    </div>
+
+    <!-- Páginas y fechas de lectura -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-4">
+        <label for="page_count" class="form-label">N.º de páginas</label>
+        <input
+          id="page_count"
+          v-model.number="form.page_count"
+          type="number"
+          class="form-control"
+          :class="{ 'is-invalid': errors.page_count }"
+          placeholder="Ej: 423"
+          min="1"
+          max="100000"
+        />
+        <div v-if="errors.page_count" class="invalid-feedback">{{ errors.page_count }}</div>
+      </div>
+      <div v-if="form.reading_status !== 'Quiero leer'" class="col-sm-4">
+        <label for="started_at" class="form-label">Fecha de inicio</label>
+        <input
+          id="started_at"
+          v-model="form.started_at"
+          type="date"
+          class="form-control"
+          :class="{ 'is-invalid': errors.dates }"
+          :max="maxDate"
+        />
+      </div>
+      <div v-if="form.reading_status === 'Leído'" class="col-sm-4">
+        <label for="finished_at" class="form-label">Fecha de término</label>
+        <input
+          id="finished_at"
+          v-model="form.finished_at"
+          type="date"
+          class="form-control"
+          :class="{ 'is-invalid': errors.dates }"
+          :max="maxDate"
+        />
+      </div>
+      <div v-if="errors.dates" class="col-12 text-danger small mt-1">{{ errors.dates }}</div>
     </div>
 
     <div v-if="apiError" class="alert alert-danger py-2" role="alert">{{ apiError }}</div>
@@ -151,6 +197,7 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
+import { datesForStatus, readingDatesError, todayISO } from '@/utils/dates'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -170,9 +217,13 @@ const form = reactive({
   genre: '',
   cover_url: '',
   reading_status: 'Quiero leer',
+  page_count: null,
+  started_at: '',
+  finished_at: '',
 })
 
-const errors = reactive({ title: '', authors: '' })
+const errors = reactive({ title: '', authors: '', page_count: '', dates: '' })
+const maxDate = todayISO()
 const isbnSearching = ref(false)
 const isbnAlert = ref(null)
 
@@ -188,10 +239,18 @@ watch(
       form.genre = data.genre ?? ''
       form.cover_url = data.cover_url ?? ''
       form.reading_status = data.reading_status ?? 'Quiero leer'
+      form.page_count = data.page_count ?? null
+      form.started_at = data.started_at ?? ''
+      form.finished_at = data.finished_at ?? ''
     }
   },
   { immediate: true }
 )
+
+// Al cambiar el estado se proponen fechas (editables), igual que el backend.
+function applyStatusDates() {
+  Object.assign(form, datesForStatus(form.reading_status, form.started_at, form.finished_at))
+}
 
 function addAuthor() {
   form.authors.push('')
@@ -210,7 +269,7 @@ async function searchByISBN() {
 
     // 1) Buscar en Open Library search (trae todo en 1 llamada cuando está completo)
     const res = await fetch(
-      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&fields=title,author_name,publisher,first_publish_year,cover_i&limit=1`
+      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&fields=title,author_name,publisher,first_publish_year,cover_i,number_of_pages_median&limit=1`
     )
     if (!res.ok) {
       isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
@@ -226,6 +285,7 @@ async function searchByISBN() {
     if (doc.author_name?.length) form.authors = [...doc.author_name]
     if (doc.publisher?.length) form.publisher = doc.publisher[0]
     if (doc.first_publish_year) form.year = doc.first_publish_year
+    if (doc.number_of_pages_median && !form.page_count) form.page_count = doc.number_of_pages_median
     if (doc.cover_i) {
       form.cover_url = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
     }
@@ -288,11 +348,29 @@ async function searchByISBN() {
 function validate() {
   errors.title = ''
   errors.authors = ''
+  errors.page_count = ''
+  errors.dates = ''
   let valid = true
   if (!form.title?.trim()) { errors.title = 'El título es obligatorio'; valid = false }
   const filled = form.authors.filter((a) => a.trim())
   if (!filled.length) { errors.authors = 'Debe indicar al menos un autor'; valid = false }
+  const pages = form.page_count
+  if (pages !== null && pages !== '' && (!Number.isInteger(pages) || pages < 1 || pages > 100000)) {
+    errors.page_count = 'Ingresa un número entre 1 y 100000'
+    valid = false
+  }
+  const { started_at, finished_at } = visibleDates()
+  errors.dates = readingDatesError(started_at, finished_at)
+  if (errors.dates) valid = false
   return valid
+}
+
+// Solo se envían las fechas visibles para el estado elegido.
+function visibleDates() {
+  return {
+    started_at: form.reading_status !== 'Quiero leer' ? form.started_at : '',
+    finished_at: form.reading_status === 'Leído' ? form.finished_at : '',
+  }
 }
 
 function handleSubmit() {
@@ -306,6 +384,9 @@ function handleSubmit() {
     genre: form.genre || null,
     cover_url: form.cover_url || null,
     reading_status: form.reading_status || 'Quiero leer',
+    page_count: form.page_count || null,
+    started_at: visibleDates().started_at || null,
+    finished_at: visibleDates().finished_at || null,
   })
 }
 </script>

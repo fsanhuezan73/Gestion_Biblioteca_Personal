@@ -6,7 +6,10 @@
           <span class="brand-mark">📚</span>
           <span class="fw-bold fs-5 text-dark">Biblioteca Personal</span>
         </RouterLink>
-        <div class="ms-auto d-flex align-items-center gap-2">
+        <div class="ms-auto d-flex flex-wrap justify-content-end align-items-center gap-2">
+          <RouterLink to="/stats" class="btn btn-outline-secondary btn-sm">
+            📊 Estadísticas
+          </RouterLink>
           <RouterLink to="/account" class="btn btn-outline-secondary btn-sm">
             Mi cuenta
           </RouterLink>
@@ -34,9 +37,27 @@
           <h1 class="page-title fw-bold mb-1">Todos tus libros, en un solo lugar</h1>
           <p class="text-muted mb-0">Explora, organiza y sigue el ritmo de tus lecturas.</p>
         </div>
-        <span v-if="booksStore.books.length" class="badge rounded-pill text-bg-light border px-3 py-2">
-          {{ booksStore.books.length }} {{ booksStore.books.length === 1 ? 'libro' : 'libros' }}
-        </span>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <RouterLink
+            v-if="statsStore.stats"
+            to="/stats"
+            class="badge rounded-pill goal-chip px-3 py-2 text-decoration-none"
+            data-test="goal-chip"
+          >
+            <template v-if="currentGoal">
+              🎯 Meta {{ statsStore.stats.year_stats.year }}: {{ currentGoal.books_read }}/{{ currentGoal.target_books }}
+            </template>
+            <template v-else>🎯 Define tu meta {{ statsStore.stats.year_stats.year }}</template>
+          </RouterLink>
+          <span v-if="booksStore.books.length" class="badge rounded-pill text-bg-light border px-3 py-2">
+            {{ booksStore.books.length }} {{ booksStore.books.length === 1 ? 'libro' : 'libros' }}
+          </span>
+        </div>
+      </div>
+
+      <div v-if="undatedOnly" class="alert alert-info d-flex flex-wrap align-items-center gap-2" data-test="undated-filter">
+        <span>Mostrando libros leídos sin fecha de término. Abre cada uno y usa «Editar» para agregarla.</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="clearAll">Mostrar todos</button>
       </div>
 
       <div class="card search-panel mb-4">
@@ -150,11 +171,13 @@ import { useBooksStore } from '@/stores/books'
 import BookCard from '@/components/BookCard.vue'
 import BookTable from '@/components/BookTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import { useStatsStore } from '@/stores/stats'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const booksStore = useBooksStore()
+const statsStore = useStatsStore()
 
 const toastMessage = ref(route.query.success || '')
 const searchQuery = ref('')
@@ -162,16 +185,22 @@ const filterGenre = ref('')
 const filterStatus = ref('')
 const showFilters = ref(false)
 const viewMode = ref('grid')
+const undatedOnly = ref(route.query.sin_fecha === '1')
+const currentGoal = computed(() => statsStore.stats?.year_stats.goal ?? null)
 
 let searchTimeout = null
 
 const hasActiveFilters = computed(() => filterGenre.value !== '' || filterStatus.value !== '')
 const activeFilterCount = computed(() => (filterGenre.value ? 1 : 0) + (filterStatus.value ? 1 : 0))
-const hasActiveSearch = computed(() => searchQuery.value.trim() !== '' || hasActiveFilters.value)
+const hasActiveSearch = computed(
+  () => searchQuery.value.trim() !== '' || hasActiveFilters.value || undatedOnly.value,
+)
 
 onMounted(() => {
-  booksStore.fetchBooks()
+  booksStore.fetchBooks(buildParams())
   booksStore.fetchGenres()
+  // Indicador de meta: complementario, si falla no afecta a la biblioteca.
+  statsStore.fetchStats().catch(() => {})
 })
 
 function buildParams() {
@@ -179,6 +208,7 @@ function buildParams() {
   if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
   if (filterGenre.value) params.genre = filterGenre.value
   if (filterStatus.value) params.reading_status = filterStatus.value
+  if (undatedOnly.value) params.without_finish_date = true
   return params
 }
 
@@ -197,6 +227,10 @@ function clearAll() {
   searchQuery.value = ''
   filterGenre.value = ''
   filterStatus.value = ''
+  if (undatedOnly.value) {
+    undatedOnly.value = false
+    router.replace({ name: 'Library' })
+  }
   booksStore.fetchBooks()
 }
 
@@ -205,3 +239,14 @@ function handleLogout() {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+.goal-chip {
+  background: #e9edff;
+  color: var(--brand-dark);
+  font-weight: 600;
+}
+.goal-chip:hover {
+  background: #dce2ff;
+}
+</style>

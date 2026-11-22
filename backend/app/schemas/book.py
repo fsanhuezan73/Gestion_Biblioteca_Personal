@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 
 
 VALID_READING_STATUSES = ("Quiero leer", "Leyendo", "Leído")
@@ -15,6 +15,9 @@ class BookCreate(BaseModel):
     publisher: Optional[str] = None
     cover_url: Optional[str] = None
     reading_status: Optional[str] = "Quiero leer"
+    started_at: Optional[date] = None
+    finished_at: Optional[date] = None
+    page_count: Optional[int] = Field(default=None, ge=1, le=100000)
 
     model_config = {"str_strip_whitespace": True}
 
@@ -28,6 +31,9 @@ class BookUpdate(BaseModel):
     publisher: Optional[str] = None
     cover_url: Optional[str] = None
     reading_status: Optional[str] = None
+    started_at: Optional[date] = None
+    finished_at: Optional[date] = None
+    page_count: Optional[int] = Field(default=None, ge=1, le=100000)
 
     model_config = {"str_strip_whitespace": True}
 
@@ -44,6 +50,9 @@ class BookSummary(BaseModel):
     reading_status: Optional[str] = None
     created_at: Optional[datetime] = None
     rating: Optional[int] = None
+    started_at: Optional[date] = None
+    finished_at: Optional[date] = None
+    page_count: Optional[int] = None
 
 
 class BookOut(BookSummary):
