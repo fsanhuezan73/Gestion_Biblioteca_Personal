@@ -1,9 +1,12 @@
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, it, expect } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import BookForm from './BookForm.vue'
 
-beforeEach(() => setActivePinia(createPinia()))
+beforeEach(() => {
+  vi.restoreAllMocks()
+  setActivePinia(createPinia())
+})
 
 describe('BookForm', () => {
   it('validates and emits the payload when the form is valid', async () => {
@@ -69,13 +72,14 @@ describe('BookForm · fechas y páginas', () => {
 describe('BookForm · escáner', () => {
   it('al escanear completa el ISBN, busca en Open Library y avisa si ya existe', async () => {
     const { default: api } = await import('@/utils/api')
-    const { vi } = await import('vitest')
     const { flushPromises } = await import('@vue/test-utils')
-    vi.spyOn(api, 'get').mockResolvedValue({ data: { isbn: '9780451524935', exists: true, books: [{ id: 7, title: '1984' }] } })
-    globalThis.fetch = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ docs: [{ title: '1984', author_name: ['George Orwell'], number_of_pages_median: 328 }] }),
-    }))
+    vi.spyOn(api, 'get').mockImplementation(async (url) => (url === '/books/check-isbn'
+      ? { data: { isbn: '9780451524935', exists: true, books: [{ id: 7, title: '1984' }] } }
+      : { data: {
+        isbn: '9780451524935', found: true, title: '1984', authors: ['George Orwell'], publisher: 'Signet',
+        year: 1949, page_count: 328, cover_url: null,
+        sources: { title: 'openlibrary', authors: 'openlibrary', page_count: 'google_books' }, unavailable_sources: [],
+      } }))
     const wrapper = mount(BookForm, {
       props: { allowScan: true },
       global: { stubs: { RouterLink: { template: '<a><slot /></a>' }, BarcodeScanner: { template: '<div data-test="scanner" />', emits: ['detected'] } } },
@@ -90,6 +94,29 @@ describe('BookForm · escáner', () => {
     expect(wrapper.find('#page_count').element.value).toBe('328')
     expect(api.get).toHaveBeenCalledWith('/books/check-isbn', { params: { isbn: '9780451524935' } })
     expect(wrapper.find('[data-test="duplicate-alert"]').text()).toContain('1984')
+    expect(api.get).toHaveBeenCalledWith('/books/lookup', { params: { isbn: '9780451524935' } })
+    expect(wrapper.text()).toContain('Datos de Open Library + Google Books')
+  })
+
+  it('ISBN inválido no consulta la API', async () => {
+    const { default: api } = await import('@/utils/api')
+    const get = vi.spyOn(api, 'get')
+    const wrapper = mount(BookForm)
+    await wrapper.find('#isbn').setValue('978-0-451-52493-6')
+    await wrapper.findAll('button').find((b) => b.text() === 'Buscar').trigger('click')
+    expect(wrapper.text()).toContain('El ISBN no es válido')
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('libro no encontrado en ninguna fuente', async () => {
+    const { default: api } = await import('@/utils/api')
+    const { flushPromises } = await import('@vue/test-utils')
+    vi.spyOn(api, 'get').mockResolvedValue({ data: { found: false, authors: [], sources: {}, unavailable_sources: [] } })
+    const wrapper = mount(BookForm)
+    await wrapper.find('#isbn').setValue('9789566196181')
+    await wrapper.findAll('button').find((b) => b.text() === 'Buscar').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Libro no encontrado en Open Library ni en Google Books')
   })
 
   it('sin allowScan no muestra el botón Escanear', () => {

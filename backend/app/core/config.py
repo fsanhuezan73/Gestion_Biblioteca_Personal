@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
 
+    # Clave de Google Books API (búsqueda por ISBN). Vacía = solo Open Library.
+    google_books_api_key: str = ""
+
     # Token compartido para /health/db (keepalive de Oracle). Vacío = deshabilitado.
     healthcheck_token: str = ""
 

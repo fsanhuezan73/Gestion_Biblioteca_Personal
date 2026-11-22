@@ -16,6 +16,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Dependencias de vistas cargadas de forma diferida: se pre-optimizan para que
+  // el servidor de desarrollo no recargue la página la primera vez que se usan.
+  optimizeDeps: {
+    include: ['chart.js', 'vue-chartjs', 'barcode-detector/ponyfill'],
+  },
   server: {
     port: 5173,
     host: true,
