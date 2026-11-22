@@ -27,12 +27,16 @@ for (const mode of ['nativo', 'WebAssembly']) test(`escanear (${mode}): completa
   page.on('request', (r) => { if (r.url().includes('zxing_reader') && r.url().endsWith('.wasm')) wasmRequested = true })
   await page.addInitScript(() => localStorage.setItem('auth_token', 'test-token'))
   if (mode === 'WebAssembly') await page.addInitScript(() => { delete globalThis.BarcodeDetector })
-  await page.route('https://openlibrary.org/**', (route) => route.fulfill({
-    json: { docs: [{ title: '1984', author_name: ['George Orwell'], publisher: ['Signet Classic'], first_publish_year: 1949, number_of_pages_median: 328 }] },
-  }))
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
+    if (url.pathname.endsWith('/books/lookup')) {
+      return route.fulfill({ json: {
+        isbn: ISBN, found: true, title: '1984', authors: ['George Orwell'], publisher: 'Signet Classic',
+        year: 1949, page_count: 328, cover_url: null,
+        sources: { title: 'openlibrary', authors: 'openlibrary', page_count: 'google_books' }, unavailable_sources: [],
+      } })
+    }
     if (url.pathname.endsWith('/books/check-isbn')) {
       expect(url.searchParams.get('isbn')).toBe(ISBN)
       return route.fulfill({ json: { isbn: ISBN, exists: true, books: [{ id: 7, title: '1984 (edición antigua)' }] } })
@@ -57,6 +61,7 @@ for (const mode of ['nativo', 'WebAssembly']) test(`escanear (${mode}): completa
   await expect(page.getByLabel(/^Título/)).toHaveValue('1984')
   await expect(page.getByLabel('N.º de páginas')).toHaveValue('328')
   await expect(page.getByTestId('duplicate-alert')).toContainText('1984 (edición antigua)')
+  await expect(page.getByText('Datos de Open Library + Google Books')).toBeVisible()
 
   await page.getByRole('button', { name: 'Guardar libro' }).click()
   await expect(page).toHaveURL(/\/library/)

@@ -32,6 +32,9 @@ services:
       # Token para /health/db (keepalive diario de Oracle desde GitHub Actions).
       - key: HEALTHCHECK_TOKEN
         sync: false
+      # Clave de Google Books API (búsqueda combinada por ISBN).
+      - key: GOOGLE_BOOKS_API_KEY
+        sync: false
       # En un servicio existente, Render ignora sync: false en actualizaciones
       # del Blueprint: configurar estas claves manualmente en el Dashboard.
       - key: PASSWORD_RESET_ENABLED

@@ -357,3 +357,20 @@ def test_check_isbn_rejects_invalid(api, isbn):
     client, cursor, _ = api
     assert client.get("/api/v1/books/check-isbn", params={"isbn": isbn}).status_code == 422
     cursor.execute.assert_not_called()
+
+
+def test_lookup_endpoint_validates_and_uses_isbn13(api):
+    client, cursor, _ = api
+    fake = {"isbn": "9780306406157", "found": True, "title": "T", "authors": ["A"], "publisher": None,
+            "year": None, "page_count": None, "cover_url": None, "sources": {"title": "openlibrary"},
+            "unavailable_sources": []}
+    with patch("app.api.v1.endpoints.books.lookup_isbn", return_value=fake) as lookup:
+        response = client.get("/api/v1/books/lookup", params={"isbn": "0-306-40615-2"})
+    assert response.status_code == 200 and response.json()["title"] == "T"
+    assert lookup.call_args.args[0] == "9780306406157"
+    assert client.get("/api/v1/books/lookup", params={"isbn": "123"}).status_code == 422
+
+
+def test_lookup_requires_auth():
+    with patch("app.main.init_db_pool"), patch("app.main.close_db_pool"):
+        assert TestClient(app).get("/api/v1/books/lookup", params={"isbn": "9780306406157"}).status_code == 401

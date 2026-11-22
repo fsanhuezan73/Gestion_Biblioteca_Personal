@@ -72,6 +72,19 @@ class BookPersonalUpdate(BaseModel):
         return value if value and value.strip() else None
 
 
+class IsbnLookupOut(BaseModel):
+    isbn: str
+    found: bool
+    title: Optional[str] = None
+    authors: List[str] = []
+    publisher: Optional[str] = None
+    year: Optional[int] = None
+    page_count: Optional[int] = None
+    cover_url: Optional[str] = None
+    sources: dict[str, str] = {}
+    unavailable_sources: List[str] = []
+
+
 class IsbnMatch(BaseModel):
     id: int
     title: str

@@ -63,6 +63,11 @@ export const useBooksStore = defineStore('books', () => {
     return data
   }
 
+  async function lookupIsbn(isbn) {
+    const { data } = await api.get('/books/lookup', { params: { isbn } })
+    return data
+  }
+
   async function checkIsbn(isbn) {
     const { data } = await api.get('/books/check-isbn', { params: { isbn } })
     return data
@@ -73,5 +78,5 @@ export const useBooksStore = defineStore('books', () => {
     books.value = books.value.filter((b) => b.id !== id)
   }
 
-  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, checkIsbn, deleteBook }
+  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, checkIsbn, lookupIsbn, deleteBook }
 })

@@ -158,6 +158,7 @@ Gestion_Biblioteca_Personal/
 | `GET` | `/api/v1/books/{id}` | Detalle de libro | ✅ |
 | `PUT` | `/api/v1/books/{id}` | Editar libro | ✅ |
 | `DELETE` | `/api/v1/books/{id}` | Eliminar libro | ✅ |
+| `GET` | `/api/v1/books/lookup?isbn=` | Datos del libro: Open Library + Google Books combinados | ✅ |
 | `GET` | `/api/v1/books/check-isbn?isbn=` | ¿Ya tengo este ISBN? (ignora guiones, acepta ISBN-10) | ✅ |
 | `GET` | `/api/v1/stats/?year=2026` | Estadísticas del año y de la biblioteca | ✅ |
 | `GET/PUT/DELETE` | `/api/v1/goals/{year}` | Meta anual de lectura | ✅ |
@@ -289,3 +290,17 @@ lectura desde una foto. Las imágenes se procesan solo en el navegador.
 - Pruebas E2E: `tests/e2e/barcode-scanner.spec.js` usa una cámara falsa de
   Chrome que muestra un código EAN-13 generado en la prueba (modo nativo y
   WebAssembly).
+
+## Búsqueda por ISBN (Open Library + Google Books)
+
+«Buscar» y el escáner usan `GET /api/v1/books/lookup`, que consulta en
+paralelo **Open Library** (base) y **Google Books** (completa los datos que
+falten: autores, páginas, año, portada). Cada dato indica su fuente y el
+formulario pide revisarlos antes de guardar. Si una fuente falla, se usa la
+otra; los resultados completos se guardan 6 horas en memoria.
+
+- Configurar `GOOGLE_BOOKS_API_KEY` en Render (clave de Google Cloud con la
+  Books API habilitada y restringida a esa API). Sin clave se usa solo Open
+  Library.
+- Libros de editoriales pequeñas (p. ej. algunos ISBN chilenos 978-956) pueden
+  no estar en ninguna base pública: se ingresan manualmente.
