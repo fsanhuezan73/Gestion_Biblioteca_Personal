@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.book_lookup import lookup_isbn
 from app.core.config import get_settings
+from app.core.covers import cover_id_from_url
 from app.core.isbn import isbn13_to_10, to_isbn13
 from app.core.reading import as_date, dates_for_status_change, today, validate_reading_dates
 from app.core.security import get_current_user
@@ -51,6 +52,22 @@ def _get_or_create_id(cursor, table: str, name: str) -> int:
     cursor.execute(insert_sql, {"n": name})
     cursor.execute(select_sql, {"n": name})
     return cursor.fetchone()[0]
+
+
+def _delete_unused_cover(cursor, cover_id: str, user_id: int) -> None:
+    """Borra una portada subida del usuario si ningún libro activo la usa."""
+    cursor.execute(
+        """
+        DELETE FROM book_covers c
+        WHERE c.id = :cover_id AND c.user_id = :user_id
+          AND NOT EXISTS (
+              SELECT 1 FROM books b
+              WHERE b.user_id = :user_id AND b.deleted_at IS NULL
+                AND b.cover_url LIKE '%/covers/' || :cover_id
+          )
+        """,
+        {"cover_id": cover_id, "user_id": user_id},
+    )
 
 
 def _ensure_valid_status(status: str | None) -> None:
@@ -483,9 +500,21 @@ def update_book(
             },
         }
 
+        # Portada subida que deja de usarse al reemplazarla o quitarla.
+        replaced_cover_id = None
+        if "cover_url" in updates:
+            cursor.execute("SELECT cover_url FROM books WHERE id = :bid", {"bid": book_id})
+            row = cursor.fetchone()
+            old_cover_id = cover_id_from_url(row[0] if row else None)
+            if old_cover_id and old_cover_id != cover_id_from_url(updates["cover_url"]):
+                replaced_cover_id = old_cover_id
+
         for field, config in scalar_map.items():
             if field in updates:
                 cursor.execute(config["sql"], {config["param"]: updates[field], "bid": book_id})
+
+        if replaced_cover_id:
+            _delete_unused_cover(cursor, replaced_cover_id, current_user_id)
 
         if (started_at, finished_at) != (current_started, current_finished):
             cursor.execute(

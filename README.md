@@ -78,6 +78,7 @@ Ejecuta el SQL de inicialización:
 @backend/sql/005_add_personal_reviews.sql
 @backend/sql/006_add_password_recovery.sql
 @backend/sql/007_add_reading_stats.sql
+@backend/sql/008_add_book_covers.sql
 ```
 
 Para instalaciones existentes con 001–005 aplicadas, ejecutar **solo** la
@@ -160,6 +161,8 @@ Gestion_Biblioteca_Personal/
 | `DELETE` | `/api/v1/books/{id}` | Eliminar libro | ✅ |
 | `GET` | `/api/v1/books/lookup?isbn=` | Datos del libro: Open Library + Google Books combinados | ✅ |
 | `GET` | `/api/v1/books/check-isbn?isbn=` | ¿Ya tengo este ISBN? (ignora guiones, acepta ISBN-10) | ✅ |
+| `POST` | `/api/v1/covers` | Subir imagen de portada (cuerpo binario JPEG/PNG/WebP, máx. 2 MB) | ✅ |
+| `GET` | `/api/v1/covers/{id}` | Imagen de portada subida (id aleatorio no adivinable) | No |
 | `GET` | `/api/v1/stats/?year=2026` | Estadísticas del año y de la biblioteca | ✅ |
 | `GET/PUT/DELETE` | `/api/v1/goals/{year}` | Meta anual de lectura | ✅ |
 | `GET` | `/health` | Health check del backend | No |
@@ -304,3 +307,21 @@ otra; los resultados completos se guardan 6 horas en memoria.
   Library.
 - Libros de editoriales pequeñas (p. ej. algunos ISBN chilenos 978-956) pueden
   no estar en ninguna base pública: se ingresan manualmente.
+
+## Portadas subidas por el usuario
+
+En **Añadir** y **Editar libro**, la sección «Portada» permite **subir una
+imagen** (en el celular, también sacar una foto), **reemplazarla**, **quitarla**
+o usar la **URL** de una imagen de internet.
+
+- El navegador reduce la imagen a 800 px como máximo y la convierte a JPEG
+  antes de subirla; se acepta un original de hasta 10 MB.
+- La imagen se sube recién al guardar el libro (`POST /api/v1/covers`), y
+  `cover_url` guarda la URL `…/api/v1/covers/{id}`. Las imágenes se almacenan
+  como BLOB en Oracle (tabla `book_covers`, migración 008): el disco de Render
+  no es persistente.
+- `GET /api/v1/covers/{id}` es público porque `<img>` no envía el JWT; el id es
+  un UUID aleatorio y la respuesta se cachea un año (reemplazar crea otro id).
+- Al reemplazar o quitar una portada subida, el backend borra la imagen anterior
+  si ningún otro libro activo la usa.
+- Ver [validación de la funcionalidad](docs/portadas.md).
