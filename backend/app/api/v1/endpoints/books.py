@@ -2,11 +2,13 @@ from oracledb import DB_TYPE_CLOB
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.isbn import isbn13_to_10, to_isbn13
 from app.core.reading import as_date, dates_for_status_change, today, validate_reading_dates
 from app.core.security import get_current_user
 from app.db.session import get_db_connection
 from app.schemas.book import (
     VALID_READING_STATUSES, BookCreate, BookOut, BookPersonalUpdate, BookSummary, BookUpdate,
+    IsbnCheckOut, IsbnMatch,
 )
 
 router = APIRouter(prefix="/books", tags=["Libros"])
@@ -335,6 +337,37 @@ def list_genres(current_user_id: int = Depends(get_current_user)):
             {"user_id": current_user_id},
         )
         return [r[0] for r in cursor.fetchall()]
+
+
+@router.get(
+    "/check-isbn",
+    response_model=IsbnCheckOut,
+    summary="Comprobar si el usuario ya tiene un libro con ese ISBN",
+)
+def check_isbn(
+    isbn: str = Query(..., max_length=32, description="ISBN-10 o ISBN-13, con o sin guiones"),
+    current_user_id: int = Depends(get_current_user),
+):
+    """Compara ignorando guiones/espacios y acepta la forma ISBN-10 equivalente."""
+    isbn13 = to_isbn13(isbn)
+    if isbn13 is None:
+        raise HTTPException(status_code=422, detail="ISBN inválido")
+    isbn10 = isbn13_to_10(isbn13)
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT b.id, b.title
+            FROM books b
+            WHERE b.user_id = :user_id AND b.deleted_at IS NULL
+              AND REPLACE(REPLACE(UPPER(b.isbn), '-', ''), ' ', '') IN (:isbn13, :isbn10)
+            ORDER BY b.created_at DESC
+            """,
+            {"user_id": current_user_id, "isbn13": isbn13, "isbn10": isbn10 or isbn13},
+        )
+        matches = [IsbnMatch(id=r[0], title=r[1]) for r in cursor.fetchall()]
+    return IsbnCheckOut(isbn=isbn13, exists=bool(matches), books=matches)
 
 
 @router.get(

@@ -327,3 +327,33 @@ def test_list_books_can_filter_read_books_without_finish_date(api):
     assert client.get("/api/v1/books/?without_finish_date=true").status_code == 200
     sql = cursor.execute.call_args_list[0].args[0]
     assert "b.finished_at IS NULL" in sql and "reading_status = 'Leído'" in sql
+
+
+# ---------------------------------------------------------------------------
+# Comprobación de ISBN (escáner)
+# ---------------------------------------------------------------------------
+
+def test_check_isbn_finds_owned_book_ignoring_format(api):
+    client, cursor, _ = api
+    cursor.fetchall.return_value = [(101, "1984")]
+    response = client.get("/api/v1/books/check-isbn", params={"isbn": "978-0-451-52493-5"})
+    assert response.status_code == 200
+    assert response.json() == {"isbn": "9780451524935", "exists": True, "books": [{"id": 101, "title": "1984"}]}
+    sql, params = cursor.execute.call_args_list[0].args
+    assert "user_id = :user_id" in sql and "deleted_at IS NULL" in sql
+    assert params == {"user_id": 42, "isbn13": "9780451524935", "isbn10": "0451524934"}
+
+
+def test_check_isbn_not_found(api):
+    client, cursor, _ = api
+    cursor.fetchall.return_value = []
+    response = client.get("/api/v1/books/check-isbn", params={"isbn": "9791032305690"})
+    assert response.json()["exists"] is False
+    assert cursor.execute.call_args_list[0].args[1]["isbn10"] == "9791032305690"
+
+
+@pytest.mark.parametrize("isbn", ["123", "9780451524936", "9771234567003"])
+def test_check_isbn_rejects_invalid(api, isbn):
+    client, cursor, _ = api
+    assert client.get("/api/v1/books/check-isbn", params={"isbn": isbn}).status_code == 422
+    cursor.execute.assert_not_called()

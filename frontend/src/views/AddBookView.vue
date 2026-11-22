@@ -11,6 +11,8 @@
     <div class="card book-form-card">
       <div class="card-body p-4 p-md-5">
         <BookForm
+          allow-scan
+          :auto-scan="route.query.scan === '1'"
           :loading="loading"
           :api-error="apiError"
           submit-label="Guardar libro"
@@ -23,11 +25,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useBooksStore } from '@/stores/books'
 import BookForm from '@/components/BookForm.vue'
 
 const router = useRouter()
+const route = useRoute()
 const booksStore = useBooksStore()
 const loading = ref(false)
 const apiError = ref('')

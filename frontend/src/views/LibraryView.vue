@@ -13,6 +13,13 @@
           <RouterLink to="/account" class="btn btn-outline-secondary btn-sm">
             Mi cuenta
           </RouterLink>
+          <RouterLink
+            :to="{ name: 'AddBook', query: { scan: '1' } }"
+            class="btn btn-outline-primary btn-sm"
+            data-test="scan-shortcut"
+          >
+            📷 Escanear
+          </RouterLink>
           <RouterLink to="/books/add" class="btn btn-primary btn-sm">
             + Añadir libro
           </RouterLink>

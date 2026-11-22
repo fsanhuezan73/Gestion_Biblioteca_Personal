@@ -63,10 +63,15 @@ export const useBooksStore = defineStore('books', () => {
     return data
   }
 
+  async function checkIsbn(isbn) {
+    const { data } = await api.get('/books/check-isbn', { params: { isbn } })
+    return data
+  }
+
   async function deleteBook(id) {
     await api.delete(`/books/${id}`)
     books.value = books.value.filter((b) => b.id !== id)
   }
 
-  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, deleteBook }
+  return { books, loading, genres, fetchBooks, fetchGenres, addBook, getBook, updateBook, updateReadingStatus, updatePersonalDetails, checkIsbn, deleteBook }
 })
