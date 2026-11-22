@@ -8,8 +8,9 @@
           <th>Autor</th>
           <th>Género</th>
           <th>Año</th>
-          <th>ISBN</th>
+          <th class="d-none d-xl-table-cell">ISBN</th>
           <th>Estado</th>
+          <th>Lectura</th>
           <th>Valoración</th>
         </tr>
       </thead>
@@ -41,11 +42,19 @@
             <span v-if="book.genre" class="badge genre-badge">{{ book.genre }}</span>
           </td>
           <td class="text-muted">{{ book.year }}</td>
-          <td class="text-muted small">{{ book.isbn }}</td>
+          <td class="text-muted small d-none d-xl-table-cell">{{ book.isbn }}</td>
           <td>
             <span class="badge" :class="statusClass(book.reading_status)">
               {{ book.reading_status || 'Quiero leer' }}
             </span>
+          </td>
+          <td class="small text-nowrap" data-test="reading-summary">
+            <template v-if="readingSummary(book)">
+              <span :class="{ 'text-muted': readingSummary(book).missing }">
+                <span class="text-muted">{{ readingSummary(book).label }}:</span> {{ readingSummary(book).date }}
+              </span>
+              <div v-if="readingSummary(book).daysDetail" class="text-muted">{{ readingSummary(book).daysDetail }}</div>
+            </template>
           </td>
           <td class="text-nowrap"><BookRating :rating="book.rating" /></td>
         </tr>
@@ -56,6 +65,7 @@
 
 <script setup>
 import BookRating from './BookRating.vue'
+import { readingSummary } from '@/utils/dates'
 
 defineProps({
   books: { type: Array, required: true },

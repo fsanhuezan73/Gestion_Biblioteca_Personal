@@ -129,6 +129,10 @@ def set_stats_rows(cursor, *, goal=(24,), monthly=None, genres=None):
         [(7, "Dune", None, datetime(2026, 6, 22)), (8, "Sin fecha", None, None)],
         monthly if monthly is not None else [(1, 2, 600), (3, 4, 1200), (6, 4, 900)],
         [("Ursula K. Le Guin", 3), ("Borges", 2)],
+        [
+            (31, "Los desposeídos", "Ursula K. Le Guin", datetime(2026, 5, 20), datetime(2026, 6, 15), 5, 400),
+            (32, "Ficciones", "Borges", None, datetime(2026, 3, 2), None, None),
+        ],
         [(2025,), (2026,)],
     ]
 
@@ -149,6 +153,12 @@ def test_stats_aggregates_year_and_library(api):
     assert year["by_month"][2] == {"month": 3, "books": 4, "pages": 1200}
     assert year["by_month"][1] == {"month": 2, "books": 0, "pages": 0}
     assert year["top_authors"][0] == {"label": "Ursula K. Le Guin", "count": 3}
+    assert year["books_read_list"][0] == {
+        "id": 31, "title": "Los desposeídos", "authors": "Ursula K. Le Guin",
+        "started_at": "2026-05-20", "finished_at": "2026-06-15", "days_to_finish": 26,
+        "rating": 5, "page_count": 400,
+    }
+    assert year["books_read_list"][1]["days_to_finish"] is None
     assert year["goal"]["target_books"] == 24
     assert year["goal"]["status"] == "behind"  # 10 leídos vs ≈12 esperados
 

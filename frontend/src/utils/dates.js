@@ -46,3 +46,35 @@ export function readingDatesError(startedAt, finishedAt, today = todayISO()) {
   }
   return ''
 }
+
+/** Texto de días de lectura: "36 días", "1 día", "el mismo día". */
+export function formatReadingDays(days) {
+  if (days === null || days === undefined) return ''
+  if (days === 0) return 'el mismo día'
+  return `${days} ${days === 1 ? 'día' : 'días'}`
+}
+
+/**
+ * Resumen de lectura para listas (cuadrícula y tabla):
+ * Leyendo → fecha de inicio; Leído → fecha de término y días de lectura.
+ * Retorna null para «Quiero leer».
+ */
+export function readingSummary(book) {
+  if (book.reading_status === 'Leyendo') {
+    return book.started_at
+      ? { label: 'Inicio', date: formatDate(book.started_at), days: '' }
+      : { label: 'Inicio', date: 'sin fecha', days: '', missing: true }
+  }
+  if (book.reading_status === 'Leído') {
+    if (!book.finished_at) return { label: 'Término', date: 'sin fecha', days: '', missing: true }
+    const days = daysBetween(book.started_at, book.finished_at)
+    return {
+      label: 'Término',
+      date: formatDate(book.finished_at),
+      days: formatReadingDays(days),
+      // Variante para la tabla: "36 días de lectura" / "Leído el mismo día".
+      daysDetail: days === null ? '' : days === 0 ? 'Leído el mismo día' : `${formatReadingDays(days)} de lectura`,
+    }
+  }
+  return null
+}

@@ -32,3 +32,28 @@ describe('fechas de lectura', () => {
     expect(formatDate('2026-03-05')).toMatch(/2026/)
   })
 })
+
+describe('resumen de lectura para listas', () => {
+  it('Leyendo muestra la fecha de inicio', async () => {
+    const { readingSummary } = await import('./dates')
+    expect(readingSummary({ reading_status: 'Leyendo', started_at: '2026-03-05' })).toMatchObject({ label: 'Inicio', days: '' })
+    expect(readingSummary({ reading_status: 'Leyendo', started_at: null })).toMatchObject({ date: 'sin fecha', missing: true })
+  })
+
+  it('Leído muestra término y días de lectura', async () => {
+    const { readingSummary } = await import('./dates')
+    const summary = readingSummary({ reading_status: 'Leído', started_at: '2026-01-05', finished_at: '2026-02-10' })
+    expect(summary.label).toBe('Término')
+    expect(summary.date).toMatch(/2026/)
+    expect(summary.days).toBe('36 días')
+    expect(summary.daysDetail).toBe('36 días de lectura')
+    expect(readingSummary({ reading_status: 'Leído', started_at: null, finished_at: '2026-02-10' }).days).toBe('')
+    expect(readingSummary({ reading_status: 'Leído', started_at: '2026-02-10', finished_at: '2026-02-10' }).daysDetail).toBe('Leído el mismo día')
+    expect(readingSummary({ reading_status: 'Leído', finished_at: null })).toMatchObject({ missing: true })
+  })
+
+  it('Quiero leer no muestra resumen', async () => {
+    const { readingSummary } = await import('./dates')
+    expect(readingSummary({ reading_status: 'Quiero leer' })).toBeNull()
+  })
+})

@@ -11,6 +11,10 @@ const stats = {
     year: 2026, books_read: 10, pages_read: 2700, avg_days_to_finish: 12.5,
     by_month: Array.from({ length: 12 }, (_, i) => ({ month: i + 1, books: i === 2 ? 4 : 0, pages: 0 })),
     top_authors: [{ label: 'Ursula K. Le Guin', count: 3 }],
+    books_read_list: [
+      { id: 31, title: 'Los desposeídos', authors: 'Ursula K. Le Guin', started_at: '2026-05-20', finished_at: '2026-06-15', days_to_finish: 26, rating: 5, page_count: 400 },
+      { id: 32, title: 'Ficciones', authors: 'Borges', started_at: null, finished_at: '2026-03-02', days_to_finish: null, rating: null, page_count: null },
+    ],
     goal: { target_books: 24, books_read: 10, percent: 42, expected_to_date: 12, difference: -2, remaining: 14, status: 'behind' },
   },
   library: {
@@ -43,6 +47,10 @@ describe('StatsView', () => {
     expect(text).toContain('4.3 ★')
     expect(text).toContain('Ursula K. Le Guin')
     expect(text).toContain('Dune')
+    const list = wrapper.find('[data-test="books-read-list"]').text()
+    expect(list).toContain('Los desposeídos')
+    expect(list).toContain('Ficciones')
+    expect(list).toContain('26 días')
     expect(wrapper.find('[data-test="undated-alert"]').text()).toContain('3 libros leídos')
   })
 

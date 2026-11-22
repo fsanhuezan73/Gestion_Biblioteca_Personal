@@ -82,6 +82,32 @@
           />
         </div>
 
+        <!-- Libros leídos en el año -->
+        <div class="card mb-4" data-test="books-read-list">
+          <div class="card-body p-4">
+            <h2 class="h6 fw-bold mb-1">Libros leídos en {{ yearStats.year }}</h2>
+            <p class="text-muted small mb-3">Del más reciente al más antiguo.</p>
+            <ul v-if="yearStats.books_read_list.length" class="list-unstyled mb-0">
+              <li
+                v-for="book in yearStats.books_read_list"
+                :key="book.id"
+                class="read-book d-flex flex-column flex-sm-row justify-content-between gap-1 gap-sm-3 py-2 border-bottom"
+              >
+                <div class="text-truncate">
+                  <RouterLink :to="`/books/${book.id}`" class="fw-semibold">{{ book.title }}</RouterLink>
+                  <div v-if="book.authors" class="text-muted small text-truncate">{{ book.authors }}</div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 small text-sm-end flex-shrink-0">
+                  <span>Terminado el {{ formatDate(book.finished_at) }}</span>
+                  <span v-if="book.days_to_finish !== null" class="text-muted">· {{ formatReadingDays(book.days_to_finish) }}</span>
+                  <BookRating v-if="book.rating" :rating="book.rating" />
+                </div>
+              </li>
+            </ul>
+            <p v-else class="text-muted small mb-0">Aún no terminas libros en {{ yearStats.year }}.</p>
+          </div>
+        </div>
+
         <div class="row g-4 mb-4">
           <div class="col-md-6">
             <StatBarChart
@@ -157,6 +183,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useStatsStore } from '@/stores/stats'
 import GoalProgress from '@/components/GoalProgress.vue'
 import StatBarChart from '@/components/StatBarChart.vue'
+import BookRating from '@/components/BookRating.vue'
+import { formatDate, formatReadingDays } from '@/utils/dates'
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 

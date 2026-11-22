@@ -7,7 +7,7 @@ from app.core.security import get_current_user
 from app.db.session import get_db_connection
 from app.schemas.stats import (
     MAX_YEAR, MIN_YEAR, CurrentlyReading, GoalProgress, LabelCount, LibraryStats, MonthCount,
-    RatingCount, StatsOut, YearStats,
+    RatingCount, ReadBook, StatsOut, YearStats,
 )
 
 router = APIRouter(prefix="/stats", tags=["Estadísticas"])
@@ -148,6 +148,29 @@ def get_stats(
         )
         top_authors = [LabelCount(label=name, count=count) for name, count in cursor.fetchall()]
 
+        # Libros terminados en el año, del más reciente al más antiguo.
+        cursor.execute(
+            f"""
+            SELECT b.id, b.title,
+                   (SELECT LISTAGG(a.name, ', ') WITHIN GROUP (ORDER BY a.name)
+                    FROM book_authors ba JOIN authors a ON a.id = ba.author_id
+                    WHERE ba.book_id = b.id) AS authors,
+                   b.started_at, b.finished_at, b.rating, b.page_count
+            FROM books b
+            WHERE {_READ_IN_YEAR}
+            ORDER BY b.finished_at DESC, b.title
+            """,
+            in_year,
+        )
+        books_read_list = []
+        for book_id, title, authors, started, finished, rating, pages in cursor.fetchall():
+            started, finished = as_date(started), as_date(finished)
+            books_read_list.append(ReadBook(
+                id=book_id, title=title, authors=authors, started_at=started, finished_at=finished,
+                days_to_finish=(finished - started).days if started else None,
+                rating=rating, page_count=pages,
+            ))
+
         cursor.execute(
             "SELECT target_books FROM reading_goals WHERE user_id = :user_id AND goal_year = :goal_year",
             {**owner, "goal_year": year},
@@ -177,6 +200,7 @@ def get_stats(
             avg_days_to_finish=round(float(avg_days), 1) if avg_days is not None else None,
             by_month=by_month,
             top_authors=top_authors,
+            books_read_list=books_read_list,
             goal=goal,
         ),
         library=LibraryStats(

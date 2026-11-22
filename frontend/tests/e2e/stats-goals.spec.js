@@ -19,6 +19,10 @@ test('definir meta, terminar un libro y ver el avance', async ({ page }) => {
           month: i + 1, books: read && i === new Date().getMonth() ? 1 : 0, pages: 0,
         })),
         top_authors: read ? [{ label: 'Frank Herbert', count: 1 }] : [],
+        books_read_list: read ? [{
+          id: 101, title: 'Dune', authors: 'Frank Herbert', started_at: null,
+          finished_at: book.finished_at, days_to_finish: null, rating: null, page_count: 600,
+        }] : [],
         goal: goal && {
           target_books: goal, books_read: read, percent: Math.round((read * 100) / goal),
           expected_to_date: 0, difference: 0, remaining: goal - read, status: 'on_track',
@@ -69,6 +73,6 @@ test('definir meta, terminar un libro y ver el avance', async ({ page }) => {
 
   await page.goto('/stats')
   await expect(page.getByText('1 de 12 libros')).toBeVisible()
-  await expect(page.getByText('Frank Herbert')).toBeVisible()
+  await expect(page.getByTestId('books-read-list').getByRole('link', { name: 'Dune' })).toBeVisible()
   await expect(page.locator('canvas').first()).toBeVisible()
 })

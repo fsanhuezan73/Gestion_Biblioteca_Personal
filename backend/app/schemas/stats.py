@@ -52,6 +52,17 @@ class CurrentlyReading(BaseModel):
     days_reading: Optional[int] = None
 
 
+class ReadBook(BaseModel):
+    id: int
+    title: str
+    authors: Optional[str] = None
+    started_at: Optional[date] = None
+    finished_at: date
+    days_to_finish: Optional[int] = None
+    rating: Optional[int] = None
+    page_count: Optional[int] = None
+
+
 class YearStats(BaseModel):
     year: int
     books_read: int
@@ -59,6 +70,7 @@ class YearStats(BaseModel):
     avg_days_to_finish: Optional[float] = None
     by_month: List[MonthCount]
     top_authors: List[LabelCount]
+    books_read_list: List[ReadBook]
     goal: Optional[GoalProgress] = None
 
 

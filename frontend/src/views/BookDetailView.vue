@@ -63,7 +63,7 @@
           <li v-if="book.finished_at" class="list-group-item px-0">
             <strong>Término de lectura:</strong> {{ formatDate(book.finished_at) }}
             <span v-if="readingDays !== null" class="text-muted small ms-1">
-              ({{ readingDays }} {{ readingDays === 1 ? 'día' : 'días' }})
+              ({{ formatReadingDays(readingDays) }} de lectura)
             </span>
           </li>
         </ul>
@@ -100,7 +100,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useBooksStore } from '@/stores/books'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BookPersonalDetails from '@/components/BookPersonalDetails.vue'
-import { daysBetween, formatDate } from '@/utils/dates'
+import { daysBetween, formatDate, formatReadingDays } from '@/utils/dates'
 
 const route = useRoute()
 const router = useRouter()
