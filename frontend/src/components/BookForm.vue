@@ -309,87 +309,44 @@ function removeAuthor(idx) {
   form.authors.splice(idx, 1)
 }
 
+const SOURCE_NAMES = { openlibrary: 'Open Library', google_books: 'Google Books' }
+
+// Búsqueda combinada en el backend (Open Library + Google Books).
 async function searchByISBN() {
   if (!form.isbn?.trim()) return
-  isbnSearching.value = true
   isbnAlert.value = null
-  checkDuplicates(form.isbn)
+  const isbn = toIsbn13(form.isbn)
+  if (!isbn) {
+    isbnAlert.value = { type: 'warning', text: 'El ISBN no es válido. Revisa los dígitos (10 o 13, sin errores de tipeo).' }
+    return
+  }
+  isbnSearching.value = true
+  checkDuplicates(isbn)
   try {
-    const isbn = form.isbn.trim().replace(/[-\s]/g, '')
-
-    // 1) Buscar en Open Library search (trae todo en 1 llamada cuando está completo)
-    const res = await fetch(
-      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&fields=title,author_name,publisher,first_publish_year,cover_i,number_of_pages_median&limit=1`
-    )
-    if (!res.ok) {
-      isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
+    const data = await booksStore.lookupIsbn(isbn)
+    if (!data.found) {
+      isbnAlert.value = {
+        type: 'warning',
+        text: data.unavailable_sources?.length
+          ? 'Los servicios de búsqueda no respondieron. Intenta nuevamente o ingresa los datos manualmente.'
+          : 'Libro no encontrado en Open Library ni en Google Books. Por favor, ingresa los datos manualmente.',
+      }
       return
     }
-    const data = await res.json()
-    if (!data.docs?.length) {
-      isbnAlert.value = { type: 'warning', text: 'Libro no encontrado. Por favor, ingresa los datos manualmente.' }
-      return
-    }
-    const doc = data.docs[0]
-    if (doc.title) form.title = doc.title
-    if (doc.author_name?.length) form.authors = [...doc.author_name]
-    if (doc.publisher?.length) form.publisher = doc.publisher[0]
-    if (doc.first_publish_year) form.year = doc.first_publish_year
-    if (doc.number_of_pages_median && !form.page_count) form.page_count = doc.number_of_pages_median
-    if (doc.cover_i) {
-      form.cover_url = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
-    }
+    if (data.title) form.title = data.title
+    if (data.authors?.length) form.authors = [...data.authors]
+    if (data.publisher) form.publisher = data.publisher
+    if (data.year) form.year = data.year
+    if (data.cover_url) form.cover_url = data.cover_url
+    if (data.page_count && !form.page_count) form.page_count = data.page_count
 
-    // 2) Fallback autores: si search no trajo author_name, resolver via edition → works → authors
-    if (!doc.author_name?.length) {
-      try {
-        const edRes = await fetch(`https://openlibrary.org/isbn/${isbn}.json`)
-        if (edRes.ok) {
-          const edition = await edRes.json()
-          // Intentar authors directos de la edición
-          if (edition.authors?.length) {
-            const names = await Promise.all(
-              edition.authors.map(async (a) => {
-                const r = await fetch(`https://openlibrary.org${a.key}.json`)
-                if (r.ok) { const d = await r.json(); return d.name }
-                return null
-              })
-            )
-            const valid = names.filter(Boolean)
-            if (valid.length) form.authors = valid
-          }
-          // Si aún no hay autores, intentar via works
-          if (form.authors.length === 1 && !form.authors[0] && edition.works?.length) {
-            const wRes = await fetch(`https://openlibrary.org${edition.works[0].key}.json`)
-            if (wRes.ok) {
-              const work = await wRes.json()
-              if (work.authors?.length) {
-                const names = await Promise.all(
-                  work.authors.map(async (a) => {
-                    const key = a.author?.key || a.key
-                    if (!key) return null
-                    const r = await fetch(`https://openlibrary.org${key}.json`)
-                    if (r.ok) { const d = await r.json(); return d.name }
-                    return null
-                  })
-                )
-                const valid = names.filter(Boolean)
-                if (valid.length) form.authors = valid
-              }
-            }
-          }
-        }
-      } catch { /* fallback silencioso — el usuario puede ingresar el autor manualmente */ }
-    }
-
-    const hasAuthor = form.authors.some((a) => a.trim())
-    if (!hasAuthor) {
-      isbnAlert.value = { type: 'info', text: 'Datos parcialmente completados. No se encontró el autor — ingrésalo manualmente.' }
-    } else {
-      isbnAlert.value = { type: 'success', text: 'Datos completados automáticamente. Revisa y guarda cuando estés listo.' }
-    }
+    const sources = [...new Set(Object.values(data.sources || {}))].map((s) => SOURCE_NAMES[s] || s)
+    const origin = `Datos de ${sources.join(' + ')}`
+    isbnAlert.value = data.authors?.length
+      ? { type: 'success', text: `${origin}. Revísalos antes de guardar.` }
+      : { type: 'info', text: `${origin}, sin autor. Ingrésalo manualmente.` }
   } catch {
-    isbnAlert.value = { type: 'warning', text: 'No se pudo conectar con la API. Por favor, ingresa los datos manualmente.' }
+    isbnAlert.value = { type: 'warning', text: 'No se pudo completar la búsqueda. Ingresa los datos manualmente.' }
   } finally {
     isbnSearching.value = false
   }

@@ -2,13 +2,15 @@ from oracledb import DB_TYPE_CLOB
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.book_lookup import lookup_isbn
+from app.core.config import get_settings
 from app.core.isbn import isbn13_to_10, to_isbn13
 from app.core.reading import as_date, dates_for_status_change, today, validate_reading_dates
 from app.core.security import get_current_user
 from app.db.session import get_db_connection
 from app.schemas.book import (
     VALID_READING_STATUSES, BookCreate, BookOut, BookPersonalUpdate, BookSummary, BookUpdate,
-    IsbnCheckOut, IsbnMatch,
+    IsbnCheckOut, IsbnLookupOut, IsbnMatch,
 )
 
 router = APIRouter(prefix="/books", tags=["Libros"])
@@ -337,6 +339,22 @@ def list_genres(current_user_id: int = Depends(get_current_user)):
             {"user_id": current_user_id},
         )
         return [r[0] for r in cursor.fetchall()]
+
+
+@router.get(
+    "/lookup",
+    response_model=IsbnLookupOut,
+    summary="Buscar datos de un libro por ISBN (Open Library + Google Books)",
+)
+async def lookup_book(
+    isbn: str = Query(..., max_length=32, description="ISBN-10 o ISBN-13, con o sin guiones"),
+    current_user_id: int = Depends(get_current_user),
+):
+    """Requiere sesión para que la cuota de la clave de Google no quede expuesta."""
+    isbn13 = to_isbn13(isbn)
+    if isbn13 is None:
+        raise HTTPException(status_code=422, detail="ISBN inválido")
+    return await lookup_isbn(isbn13, get_settings().google_books_api_key)
 
 
 @router.get(
