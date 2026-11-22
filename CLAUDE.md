@@ -33,6 +33,13 @@ Sistema web de gestión de una biblioteca personal de libros.
    - E2E: `npx playwright test` (ver la nota sobre Playwright más abajo).
 5. Después de un merge a `main`: comprobar el despliegue en Render (que el endpoint nuevo aparezca en `/openapi.json`) y en Vercel, y revisar los logs.
 
+## Revisiones de IA de pago (Copilot, Codex)
+
+- El 22 de noviembre de 2026, los PR #16 a #25 dispararon revisiones automáticas de Copilot que agotaron los créditos y parte del presupuesto adicional.
+- **Nunca** pedir revisiones a Copilot, Codex u otros bots de IA (revisores, `requested_reviewers`, comentarios `@copilot`/`@codex`) sin aprobación explícita del usuario en el chat para ese PR.
+- Abrir un PR puede disparar revisiones automáticas. Después de cada `gh pr create`, comprobar si se pidió alguna; si ocurrió, detenerse y avisar al usuario.
+- La regla y los hooks globales están en `~/.claude/CLAUDE.md` y `~/.claude/settings.json`.
+
 ## Secretos (nunca verlos ni escribirlos)
 
 - No leer, imprimir ni pegar en comandos o herramientas los valores de claves y tokens.
