@@ -70,3 +70,14 @@ class BookPersonalUpdate(BaseModel):
     def empty_notes_as_null(cls, value: str | None) -> str | None:
         # Conservar saltos de línea y espacios de las notas no vacías.
         return value if value and value.strip() else None
+
+
+class IsbnMatch(BaseModel):
+    id: int
+    title: str
+
+
+class IsbnCheckOut(BaseModel):
+    isbn: str
+    exists: bool
+    books: List[IsbnMatch]
