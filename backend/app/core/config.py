@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
 
+    # Token compartido para /health/db (keepalive de Oracle). Vacío = deshabilitado.
+    healthcheck_token: str = ""
+
     allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
     app_env: str = "development"
 
