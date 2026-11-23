@@ -60,6 +60,13 @@ Importa el repo en Vercel y configura:
 - Root directory: `frontend`
 - Build command: `npm run build`
 - Output directory: `dist`
+- Rama de producción: `main` (Settings → Environments → Production → Branch Tracking)
+
+**Importante:** la rama de producción debe ser `main`, igual que en Render. Hasta el 23 de noviembre
+de 2026 estaba configurada como `development`, así que cada merge a `development` se publicaba en
+`biblioteca-personal.site` antes que la API y las migraciones. Si cambias esa rama, vuelve a
+desplegar en producción el último commit de `main` y confirma que los merges a `development`
+generan solo despliegues Preview.
 
 Añade esta variable de entorno:
 
