@@ -34,6 +34,20 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
+Recomendaciones con IA (secretos: pegarlos directamente en Render):
+
+```env
+GEMINI_API_KEY=clave_de_google_ai_studio
+GROQ_API_KEY=clave_de_groq
+AI_PROVIDER_ORDER=gemini,groq
+AI_DAILY_LIMIT=5
+```
+
+`AI_GEMINI_MODEL` (`gemini-3.5-flash-lite`) y `AI_GROQ_MODEL`
+(`openai/gpt-oss-120b`) tienen valor por defecto. Sin ninguna clave, la sección
+«Para ti» responde que no está configurada. La migración 009 debe estar
+aplicada antes de desplegar este código.
+
 ### Importante
 - `ALLOWED_ORIGINS` debe incluir exactamente el dominio público del frontend en Vercel.
 - El dominio canónico de producción es `https://biblioteca-personal.site`.

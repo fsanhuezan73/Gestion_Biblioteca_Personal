@@ -1,0 +1,94 @@
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import api from '@/utils/api'
+import { useBooksStore } from '@/stores/books'
+
+// La IA y la verificación en catálogos, más el arranque en frío de Render, pueden
+// tardar bastante más que una petición normal.
+export const GENERATE_TIMEOUT_MS = 90000
+
+const ERROR_MESSAGES = {
+  422: 'Necesitas más libros leídos con valoración para recibir recomendaciones.',
+  429: 'Ya usaste las recomendaciones de hoy. Vuelve mañana.',
+  502: 'No pudimos confirmar ninguna recomendación en los catálogos. Intenta de nuevo.',
+  503: 'El servicio de recomendaciones no está disponible ahora. Intenta más tarde.',
+}
+
+function errorMessage(err) {
+  if (err.code === 'ECONNABORTED') return 'La solicitud tardó demasiado. Intenta de nuevo en un momento.'
+  const status = err.response?.status
+  return err.response?.data?.detail || ERROR_MESSAGES[status] || 'No se pudieron generar recomendaciones. Intenta nuevamente.'
+}
+
+export const useRecommendationsStore = defineStore('recommendations', () => {
+  const data = ref(null)
+  const generating = ref(false)
+  const error = ref('')
+  const unavailable = ref(false)
+  const adding = ref({})
+
+  const items = computed(() => data.value?.recommendations ?? [])
+  const enoughRatedBooks = computed(() => !!data.value && data.value.rated_books >= data.value.min_rated_books)
+  const canGenerate = computed(
+    () => enoughRatedBooks.value && data.value.remaining_today > 0 && !generating.value,
+  )
+
+  async function fetchLatest() {
+    try {
+      const { data: result } = await api.get('/ai/recommendations')
+      data.value = result
+      unavailable.value = false
+    } catch {
+      // Sección complementaria: si falla, se oculta sin afectar la biblioteca.
+      unavailable.value = true
+    }
+  }
+
+  async function generate() {
+    generating.value = true
+    error.value = ''
+    try {
+      const { data: result } = await api.post('/ai/recommendations', null, { timeout: GENERATE_TIMEOUT_MS })
+      data.value = result
+    } catch (err) {
+      error.value = errorMessage(err)
+      // Al llegar al límite se refresca el contador y se conserva el último resultado.
+      if (err.response?.status === 429) await fetchLatest()
+    } finally {
+      generating.value = false
+    }
+  }
+
+  async function addToWantToRead(book) {
+    const key = book.isbn || book.title
+    adding.value = { ...adding.value, [key]: true }
+    try {
+      const booksStore = useBooksStore()
+      const created = await booksStore.addBook({
+        title: book.title,
+        authors: book.authors?.length ? book.authors : ['Desconocido'],
+        isbn: book.isbn || null,
+        year: book.year || null,
+        publisher: book.publisher || null,
+        cover_url: book.cover_url || null,
+        page_count: book.page_count || null,
+        reading_status: 'Quiero leer',
+      })
+      book.in_library = true
+      return created
+    } finally {
+      const rest = { ...adding.value }
+      delete rest[key]
+      adding.value = rest
+    }
+  }
+
+  function isAdding(book) {
+    return !!adding.value[book.isbn || book.title]
+  }
+
+  return {
+    data, generating, error, unavailable, items, enoughRatedBooks, canGenerate,
+    fetchLatest, generate, addToWantToRead, isAdding,
+  }
+})

@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     # Clave de Google Books API (búsqueda por ISBN). Vacía = solo Open Library.
     google_books_api_key: str = ""
 
+    # Recomendaciones con IA. Un proveedor sin clave se omite; sin ninguno, 503.
+    gemini_api_key: str = ""
+    groq_api_key: str = ""
+    ai_provider_order: str = "gemini,groq"
+    ai_gemini_model: str = "gemini-3.5-flash-lite"
+    ai_groq_model: str = "openai/gpt-oss-120b"
+    ai_daily_limit: int = 5
+    ai_min_rated_books: int = 3
+
     # Token compartido para /health/db (keepalive de Oracle). Vacío = deshabilitado.
     healthcheck_token: str = ""
 
@@ -38,7 +47,8 @@ class Settings(BaseSettings):
     app_timezone: str = "America/Santiago"
 
     class Config:
-        env_file = (str(BASE_DIR / ".env"), ".env", "backend/.env")
+        # .env.ai (local, ignorado por Git) guarda solo las claves de IA.
+        env_file = (str(BASE_DIR / ".env"), ".env", "backend/.env", str(BASE_DIR / ".env.ai"))
         case_sensitive = False
 
 

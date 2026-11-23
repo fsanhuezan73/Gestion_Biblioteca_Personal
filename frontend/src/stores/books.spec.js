@@ -35,7 +35,7 @@ describe('subir portada', () => {
     const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 'abc123' } })
     const url = await store.uploadCover(blob)
     expect(post).toHaveBeenCalledWith('/covers', blob, { headers: { 'Content-Type': 'image/jpeg' } })
-    expect(url).toBe(new URL(`${api.defaults.baseURL}/covers/abc123`, window.location.origin).href)
+    expect(url).toBe(new globalThis.URL(`${api.defaults.baseURL}/covers/abc123`, window.location.origin).href)
     expect(url).toMatch(/^https?:\/\/.+\/covers\/abc123$/)
   })
 })

@@ -165,6 +165,8 @@ Gestion_Biblioteca_Personal/
 | `GET` | `/api/v1/covers/{id}` | Imagen de portada subida (id aleatorio no adivinable) | No |
 | `GET` | `/api/v1/stats/?year=2026` | Estadísticas del año y de la biblioteca | ✅ |
 | `GET/PUT/DELETE` | `/api/v1/goals/{year}` | Meta anual de lectura | ✅ |
+| `GET` | `/api/v1/ai/recommendations` | Último resultado de «Para ti» y cupo diario | ✅ |
+| `POST` | `/api/v1/ai/recommendations` | Generar hasta 5 recomendaciones con IA (verificadas) | ✅ |
 | `GET` | `/health` | Health check del backend | No |
 | `GET` | `/health/db` | Ejecuta SQL en Oracle (keepalive diario, ver DEPLOY.md) | Header `X-Health-Token` |
 
@@ -307,6 +309,27 @@ otra; los resultados completos se guardan 6 horas en memoria.
   Library.
 - Libros de editoriales pequeñas (p. ej. algunos ISBN chilenos 978-956) pueden
   no estar en ninguna base pública: se ingresan manualmente.
+
+## Recomendaciones con IA («Para ti»)
+
+En la biblioteca, el botón **«Recomiéndame qué leer»** sugiere hasta 5 libros,
+cada uno con motivo y sinopsis, y permite agregarlos a «Quiero leer».
+
+- La IA recibe solo título, autor, género y estrellas de hasta 40 libros leídos
+  y valorados. Las notas privadas nunca se consultan ni se envían.
+- Proveedor principal Gemini (`gemini-3.5-flash-lite`) y respaldo Groq
+  (`openai/gpt-oss-120b`), ambos en su plan gratuito e intercambiables con
+  `AI_PROVIDER_ORDER`.
+- Se piden 8 candidatos. Cada uno se verifica por título y autor en Google
+  Books (con Open Library de respaldo) y se descartan los inexistentes y los
+  que ya están en la biblioteca. La sinopsis viene de Google Books, nunca de la
+  IA.
+- Requiere 3 libros leídos con valoración. Límite: 5 generaciones exitosas por
+  día y usuario (tabla `ai_recommendations`, migración 009).
+- Variables: `GEMINI_API_KEY`, `GROQ_API_KEY`, `AI_PROVIDER_ORDER`,
+  `AI_GEMINI_MODEL`, `AI_GROQ_MODEL`, `AI_DAILY_LIMIT`, `AI_MIN_RATED_BOOKS`.
+  En local, las claves van en `backend/.env.ai` (ignorado por Git).
+- Ver [detalle y validación](docs/recomendaciones-ia.md).
 
 ## Portadas subidas por el usuario
 
