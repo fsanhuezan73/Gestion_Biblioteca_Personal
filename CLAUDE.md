@@ -37,7 +37,8 @@ Sistema web de gestión de una biblioteca personal de libros.
 
 - El 22 de noviembre de 2026, los PR #16 a #25 dispararon revisiones automáticas de Copilot que agotaron los créditos y parte del presupuesto adicional.
 - **Nunca** pedir revisiones a Copilot, Codex u otros bots de IA (revisores, `requested_reviewers`, comentarios `@copilot`/`@codex`) sin aprobación explícita del usuario en el chat para ese PR.
-- Abrir un PR puede disparar revisiones automáticas. Después de cada `gh pr create`, comprobar si se pidió alguna; si ocurrió, detenerse y avisar al usuario.
+- Estado acordado: revisión automática de Copilot **desactivada** en la cuenta; revisión **automática** de Codex al abrir un PR **autorizada**. Pedir revisiones extra a Codex (`@codex review`) requiere aprobación.
+- Abrir un PR puede disparar revisiones automáticas. Después de cada `gh pr create`, comprobar si Copilot u otro bot no autorizado recibió una solicitud; si ocurrió, detenerse y avisar al usuario.
 - La regla y los hooks globales están en `~/.claude/CLAUDE.md` y `~/.claude/settings.json`.
 
 ## Secretos (nunca verlos ni escribirlos)
