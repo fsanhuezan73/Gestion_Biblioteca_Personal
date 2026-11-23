@@ -44,6 +44,13 @@
   borran la imagen anterior, rechazo de más de 2 MB (413), SVG (415) y subida
   sin JWT (401), sin imágenes huérfanas al terminar.
 
-## Validación en BIBLIOTECA_PERSONAL
+## Validación en BIBLIOTECA_PERSONAL (22 de noviembre de 2026)
 
-Pendiente: se aplica con aprobación antes del merge a `main`.
+- Aplicada con aprobación explícita del usuario. `SESSION_USER` y `CURRENT_SCHEMA`
+  confirmados como `BIBLIOTECA_PERSONAL`, sin `BOOK_COVERS` previa.
+- Respaldo lógico previo con SHA256 verificado en
+  `~/Backups/BibliotecaPersonal/20261123T000904Z-before-008/`.
+- Migración aplicada (6 sentencias). Estructura de `BOOK_COVERS` (columnas,
+  restricciones e índices) idéntica a `BIBLIOTECA_TEST`.
+- Instantánea posterior (`20261123T000952Z-after-008`): las 9 tablas existentes
+  quedaron byte a byte iguales al respaldo; `BOOK_COVERS` está vacía.
