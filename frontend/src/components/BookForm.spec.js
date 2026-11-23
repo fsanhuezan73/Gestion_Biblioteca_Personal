@@ -124,3 +124,94 @@ describe('BookForm · escáner', () => {
     expect(wrapper.find('[data-test="open-scanner"]').exists()).toBe(false)
   })
 })
+
+describe('BookForm · portada', () => {
+  const EXISTING = { title: 'Dune', authors: ['Frank Herbert'], reading_status: 'Quiero leer', cover_url: 'https://covers.example/dune.jpg' }
+
+  async function mockImages(blob = { size: 1234, type: 'image/jpeg' }) {
+    const images = await import('@/utils/images')
+    vi.spyOn(images, 'compressCoverImage').mockResolvedValue(blob)
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:preview')
+    globalThis.URL.revokeObjectURL = vi.fn()
+    return images
+  }
+
+  async function chooseFile(wrapper) {
+    const input = wrapper.find('[data-test="cover-file"]')
+    Object.defineProperty(input.element, 'files', { value: [{ type: 'image/png', size: 500 }], configurable: true })
+    await input.trigger('change')
+    const { flushPromises } = await import('@vue/test-utils')
+    await flushPromises()
+  }
+
+  it('sin portada muestra el botón para subir una imagen', () => {
+    const wrapper = mount(BookForm, { props: { initialData: { ...EXISTING, cover_url: null } } })
+    expect(wrapper.find('[data-test="cover-preview"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="cover-upload"]').text()).toContain('Subir imagen')
+    expect(wrapper.find('[data-test="cover-remove"]').exists()).toBe(false)
+  })
+
+  it('con portada permite reemplazarla o quitarla', async () => {
+    const wrapper = mount(BookForm, { props: { initialData: EXISTING } })
+    expect(wrapper.find('[data-test="cover-preview"]').attributes('src')).toBe(EXISTING.cover_url)
+    expect(wrapper.find('[data-test="cover-upload"]').text()).toContain('Reemplazar')
+    await wrapper.find('[data-test="cover-remove"]').trigger('click')
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.emitted('submit')[0][0].cover_url).toBeNull()
+  })
+
+  it('sube la imagen elegida al guardar y envía su URL', async () => {
+    await mockImages()
+    const { useBooksStore } = await import('@/stores/books')
+    const store = useBooksStore()
+    const upload = vi.spyOn(store, 'uploadCover').mockResolvedValue('https://api.example/api/v1/covers/abc')
+    const wrapper = mount(BookForm, { props: { initialData: EXISTING } })
+
+    await chooseFile(wrapper)
+    expect(wrapper.find('[data-test="cover-preview"]').attributes('src')).toBe('blob:preview')
+    expect(upload).not.toHaveBeenCalled() // aún no se sube
+
+    await wrapper.find('form').trigger('submit')
+    const { flushPromises } = await import('@vue/test-utils')
+    await flushPromises()
+    expect(upload).toHaveBeenCalledWith({ size: 1234, type: 'image/jpeg' })
+    expect(wrapper.emitted('submit')[0][0].cover_url).toBe('https://api.example/api/v1/covers/abc')
+  })
+
+  it('si la subida falla no guarda el libro y muestra el error', async () => {
+    await mockImages()
+    const { useBooksStore } = await import('@/stores/books')
+    vi.spyOn(useBooksStore(), 'uploadCover').mockRejectedValue({ response: { data: { detail: 'Formato no soportado' } } })
+    const wrapper = mount(BookForm, { props: { initialData: EXISTING } })
+
+    await chooseFile(wrapper)
+    await wrapper.find('form').trigger('submit')
+    const { flushPromises } = await import('@vue/test-utils')
+    await flushPromises()
+    expect(wrapper.emitted('submit')).toBeUndefined()
+    expect(wrapper.find('[data-test="cover-error"]').text()).toBe('Formato no soportado')
+  })
+
+  it('muestra el error de una imagen inválida', async () => {
+    const images = await mockImages()
+    images.compressCoverImage.mockRejectedValue(new images.CoverImageError('La imagen supera los 10 MB. Elige una más liviana.'))
+    const wrapper = mount(BookForm, { props: { initialData: EXISTING } })
+    await chooseFile(wrapper)
+    expect(wrapper.find('[data-test="cover-error"]').text()).toContain('10 MB')
+    expect(wrapper.find('[data-test="cover-preview"]').attributes('src')).toBe(EXISTING.cover_url)
+  })
+
+  it('acepta una URL http(s) y rechaza otras', async () => {
+    const wrapper = mount(BookForm, { props: { initialData: { ...EXISTING, cover_url: null } } })
+    await wrapper.find('[data-test="cover-url-toggle"]').trigger('click')
+    await wrapper.find('[data-test="cover-url-input"]').setValue('javascript:alert(1)')
+    await wrapper.find('[data-test="cover-url-apply"]').trigger('click')
+    expect(wrapper.find('[data-test="cover-error"]').exists()).toBe(true)
+
+    await wrapper.find('[data-test="cover-url-input"]').setValue('https://img.example/portada.jpg')
+    await wrapper.find('[data-test="cover-url-apply"]').trigger('click')
+    expect(wrapper.find('[data-test="cover-preview"]').attributes('src')).toBe('https://img.example/portada.jpg')
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.emitted('submit')[0][0].cover_url).toBe('https://img.example/portada.jpg')
+  })
+})

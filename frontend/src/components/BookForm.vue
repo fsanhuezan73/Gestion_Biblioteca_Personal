@@ -91,19 +91,77 @@
 
     <BarcodeScanner v-if="showScanner" @detected="handleScanned" @close="showScanner = false" />
 
-    <!-- Portada autocomplete preview -->
-    <div v-if="form.cover_url" class="mb-3 text-center">
-      <img
-        :src="form.cover_url"
-        alt="Portada del libro"
-        class="rounded shadow-sm"
-        style="max-height: 160px; object-fit: contain"
-      />
-      <div class="mt-1">
-        <button type="button" class="btn btn-link btn-sm text-danger p-0" @click="form.cover_url = ''">
-          Quitar portada
+    <!-- Portada: de la búsqueda por ISBN, subida por el usuario o desde una URL -->
+    <div class="mb-3" data-test="cover-section">
+      <label class="form-label">Portada</label>
+      <div class="d-flex gap-3 align-items-start">
+        <div class="cover-preview-frame rounded border bg-light d-flex align-items-center justify-content-center overflow-hidden">
+          <span v-if="coverProcessing" class="spinner-border spinner-border-sm text-secondary" role="status" />
+          <img
+            v-else-if="coverPreview && !coverBroken"
+            :src="coverPreview"
+            alt="Portada del libro"
+            class="cover-preview-image"
+            data-test="cover-preview"
+            @error="coverBroken = true"
+          />
+          <span v-else class="text-muted small text-center px-1">{{ coverPreview ? 'No se pudo cargar' : 'Sin portada' }}</span>
+        </div>
+        <div class="d-flex flex-column align-items-start gap-2">
+          <input
+            ref="coverInput"
+            type="file"
+            accept="image/*"
+            class="d-none"
+            data-test="cover-file"
+            @change="onCoverFileChange"
+          />
+          <button
+            type="button"
+            class="btn btn-outline-primary btn-sm"
+            data-test="cover-upload"
+            :disabled="coverProcessing || coverUploading"
+            @click="coverInput?.click()"
+          >
+            {{ coverPreview ? '🔄 Reemplazar imagen' : '📁 Subir imagen' }}
+          </button>
+          <button
+            v-if="coverPreview"
+            type="button"
+            class="btn btn-link btn-sm text-danger p-0"
+            data-test="cover-remove"
+            :disabled="coverUploading"
+            @click="removeCover"
+          >
+            Quitar portada
+          </button>
+          <button
+            type="button"
+            class="btn btn-link btn-sm p-0"
+            data-test="cover-url-toggle"
+            @click="toggleCoverUrl"
+          >
+            {{ showCoverUrl ? 'Cancelar URL' : 'Usar una URL de imagen' }}
+          </button>
+        </div>
+      </div>
+      <div v-if="showCoverUrl" class="input-group input-group-sm mt-2">
+        <input
+          id="cover_url_input"
+          v-model="coverUrlDraft"
+          type="url"
+          class="form-control"
+          placeholder="https://…/portada.jpg"
+          data-test="cover-url-input"
+          @keydown.enter.prevent="applyCoverUrl"
+        />
+        <button type="button" class="btn btn-outline-secondary" data-test="cover-url-apply" @click="applyCoverUrl">
+          Usar
         </button>
       </div>
+      <div v-if="coverError" class="text-danger small mt-1" role="alert" data-test="cover-error">{{ coverError }}</div>
+      <div v-else-if="pendingCover" class="form-text">La imagen se subirá al guardar el libro.</div>
+      <div v-else class="form-text">JPG, PNG o WebP de hasta 10 MB; se reduce automáticamente. En el celular puedes sacarle una foto.</div>
     </div>
 
     <!-- Editorial -->
@@ -206,18 +264,19 @@
 
     <div v-if="apiError" class="alert alert-danger py-2" role="alert">{{ apiError }}</div>
 
-    <button type="submit" class="btn btn-primary w-100" :disabled="loading">
-      <span v-if="loading" class="spinner-border spinner-border-sm me-2" />
-      {{ submitLabel }}
+    <button type="submit" class="btn btn-primary w-100" :disabled="loading || coverUploading || coverProcessing">
+      <span v-if="loading || coverUploading" class="spinner-border spinner-border-sm me-2" />
+      {{ coverUploading ? 'Subiendo portada…' : submitLabel }}
     </button>
   </form>
 </template>
 
 <script setup>
-import { defineAsyncComponent, onMounted, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useBooksStore } from '@/stores/books'
 import { toIsbn13 } from '@/utils/isbn'
 import { datesForStatus, readingDatesError, todayISO } from '@/utils/dates'
+import { CoverImageError, compressCoverImage } from '@/utils/images'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -380,8 +439,88 @@ function visibleDates() {
   }
 }
 
-function handleSubmit() {
+// --- Portada ---------------------------------------------------------------
+// La imagen elegida se comprime al instante, pero se sube recién al guardar:
+// así no quedan imágenes huérfanas si el usuario cancela el formulario.
+const coverInput = ref(null)
+const pendingCover = ref(null)
+const pendingCoverUrl = ref('')
+const coverProcessing = ref(false)
+const coverUploading = ref(false)
+const coverError = ref('')
+const coverBroken = ref(false)
+const showCoverUrl = ref(false)
+const coverUrlDraft = ref('')
+
+const coverPreview = computed(() => pendingCoverUrl.value || form.cover_url)
+watch(coverPreview, () => { coverBroken.value = false })
+
+function clearPendingCover() {
+  if (pendingCoverUrl.value) globalThis.URL.revokeObjectURL(pendingCoverUrl.value)
+  pendingCover.value = null
+  pendingCoverUrl.value = ''
+}
+
+onBeforeUnmount(clearPendingCover)
+
+async function onCoverFileChange(event) {
+  const file = event.target.files?.[0]
+  event.target.value = '' // permite volver a elegir el mismo archivo
+  if (!file) return
+  coverError.value = ''
+  coverProcessing.value = true
+  try {
+    const blob = await compressCoverImage(file)
+    clearPendingCover()
+    pendingCover.value = blob
+    pendingCoverUrl.value = globalThis.URL.createObjectURL(blob)
+    showCoverUrl.value = false
+  } catch (err) {
+    coverError.value = err instanceof CoverImageError ? err.message : 'No se pudo procesar la imagen.'
+  } finally {
+    coverProcessing.value = false
+  }
+}
+
+function removeCover() {
+  clearPendingCover()
+  form.cover_url = ''
+  coverError.value = ''
+}
+
+function toggleCoverUrl() {
+  showCoverUrl.value = !showCoverUrl.value
+  coverUrlDraft.value = ''
+  coverError.value = ''
+}
+
+function applyCoverUrl() {
+  const url = coverUrlDraft.value.trim()
+  if (!/^https?:\/\/\S+$/i.test(url) || url.length > 500) {
+    coverError.value = 'Ingresa una URL válida que empiece con http:// o https://'
+    return
+  }
+  clearPendingCover()
+  form.cover_url = url
+  coverError.value = ''
+  showCoverUrl.value = false
+}
+
+async function handleSubmit() {
   if (!validate()) return
+  if (pendingCover.value) {
+    coverError.value = ''
+    coverUploading.value = true
+    try {
+      form.cover_url = await booksStore.uploadCover(pendingCover.value)
+      clearPendingCover()
+    } catch (err) {
+      coverError.value = err.response?.data?.detail || 'No se pudo subir la portada. Intenta nuevamente.'
+      return
+    } finally {
+      coverUploading.value = false
+    }
+  }
   emit('submit', {
     title: form.title.trim(),
     authors: form.authors.map((a) => a.trim()).filter(Boolean),
@@ -397,3 +536,17 @@ function handleSubmit() {
   })
 }
 </script>
+
+<style scoped>
+.cover-preview-frame {
+  width: 96px;
+  height: 144px;
+  flex-shrink: 0;
+}
+
+.cover-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+</style>

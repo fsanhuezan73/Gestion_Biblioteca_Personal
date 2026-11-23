@@ -4,6 +4,17 @@ from datetime import date, datetime
 
 
 VALID_READING_STATUSES = ("Quiero leer", "Leyendo", "Leído")
+MAX_COVER_URL_LENGTH = 500  # books.cover_url VARCHAR2(500)
+
+
+def _clean_cover_url(value: str | None) -> str | None:
+    """Vacía = sin portada. Solo URLs http(s) o rutas propias de la API."""
+    if value is None or not value.strip():
+        return None
+    value = value.strip()
+    if not value.lower().startswith(("https://", "http://", "/")) or value.startswith("//"):
+        raise ValueError("La URL de la portada debe empezar con http:// o https://")
+    return value
 
 
 class BookCreate(BaseModel):
@@ -13,13 +24,18 @@ class BookCreate(BaseModel):
     year: Optional[int] = None
     genre: Optional[str] = None
     publisher: Optional[str] = None
-    cover_url: Optional[str] = None
+    cover_url: Optional[str] = Field(default=None, max_length=MAX_COVER_URL_LENGTH)
     reading_status: Optional[str] = "Quiero leer"
     started_at: Optional[date] = None
     finished_at: Optional[date] = None
     page_count: Optional[int] = Field(default=None, ge=1, le=100000)
 
     model_config = {"str_strip_whitespace": True}
+
+    @field_validator("cover_url")
+    @classmethod
+    def valid_cover_url(cls, value: str | None) -> str | None:
+        return _clean_cover_url(value)
 
 
 class BookUpdate(BaseModel):
@@ -29,13 +45,18 @@ class BookUpdate(BaseModel):
     year: Optional[int] = None
     genre: Optional[str] = None
     publisher: Optional[str] = None
-    cover_url: Optional[str] = None
+    cover_url: Optional[str] = Field(default=None, max_length=MAX_COVER_URL_LENGTH)
     reading_status: Optional[str] = None
     started_at: Optional[date] = None
     finished_at: Optional[date] = None
     page_count: Optional[int] = Field(default=None, ge=1, le=100000)
 
     model_config = {"str_strip_whitespace": True}
+
+    @field_validator("cover_url")
+    @classmethod
+    def valid_cover_url(cls, value: str | None) -> str | None:
+        return _clean_cover_url(value)
 
 
 class BookSummary(BaseModel):
