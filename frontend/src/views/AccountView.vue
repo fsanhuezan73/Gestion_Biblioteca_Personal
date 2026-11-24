@@ -1,7 +1,6 @@
 <template>
   <div class="app-shell">
-    <div class="container py-4 py-md-5">
-      <nav class="mb-4"><RouterLink to="/library">← Volver a mi biblioteca</RouterLink></nav>
+    <div class="container py-4">
       <div class="card shadow-sm account-card mx-auto">
         <div class="card-body p-4 p-md-5">
           <p class="page-kicker mb-1">Mi cuenta</p>

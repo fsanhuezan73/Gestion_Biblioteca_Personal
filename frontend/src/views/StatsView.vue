@@ -1,7 +1,6 @@
 <template>
   <div class="app-shell">
-    <div class="container py-4 py-md-5">
-      <nav class="mb-4"><RouterLink to="/library">← Volver a mi biblioteca</RouterLink></nav>
+    <div class="container py-4">
 
       <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
         <div>

@@ -58,7 +58,8 @@ test('definir meta, terminar un libro y ver el avance', async ({ page }) => {
 
   await page.goto('/library')
   await expect(page.getByText(`🎯 Define tu meta ${year}`)).toBeVisible()
-  await page.getByRole('link', { name: '📊 Estadísticas' }).click()
+  await page.getByRole('button', { name: 'Abrir menú' }).click()
+  await page.getByRole('link', { name: 'Estadísticas' }).click()
 
   await expect(page.getByText('Sin meta definida')).toBeVisible()
   await page.getByRole('button', { name: 'Definir meta' }).click()
