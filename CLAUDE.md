@@ -48,6 +48,7 @@ Sistema web de gestión de una biblioteca personal de libros.
 - Secretos actuales:
   - `HEALTHCHECK_TOKEN`: Render y GitHub.
   - `GOOGLE_BOOKS_API_KEY`: Render; copia local en `backend/.env.googlebooks`.
+  - `GEMINI_API_KEY` y `GROQ_API_KEY`: Render; copia local en `backend/.env.ai` (lo carga `config.py`).
   - Credenciales de Oracle, JWT y SMTP: Render.
 - `backend/.gitignore` ignora `.env` y `.env.*` (excepto `.env.example`). Confirmar con `git check-ignore` antes de crear un archivo de secretos.
 
@@ -59,8 +60,8 @@ Sistema web de gestión de una biblioteca personal de libros.
 | `BIBLIOTECA_TEST` | Pruebas de migraciones y validaciones | `backend/.env.test` |
 
 - **Ojo:** `backend/.env` apunta a producción. Un backend local con `.env` usa datos reales. Para pruebas, cargar `.env.test`; las variables de entorno tienen prioridad sobre el archivo `.env`.
-- **Migraciones:** `backend/sql/NNN_*.sql`; las 001–008 están aplicadas en ambos esquemas. Nunca aplicarlas automáticamente al iniciar la app. Para una nueva:
-  1. Crear el archivo siguiente (`009_…`). No modificar una migración ya aplicada.
+- **Migraciones:** `backend/sql/NNN_*.sql`; las 001–009 están aplicadas en ambos esquemas. Nunca aplicarlas automáticamente al iniciar la app. Para una nueva:
+  1. Crear el archivo siguiente (`010_…`). No modificar una migración ya aplicada.
   2. Confirmar `SESSION_USER` y `CURRENT_SCHEMA` → respaldar → aplicar en TEST → validar.
   3. **Con aprobación del usuario**, respaldar y aplicar en PERSONAL. Comparar la estructura con TEST y los datos con el respaldo.
   4. Aplicar la migración **antes** de desplegar el código que la necesita.
@@ -94,4 +95,4 @@ Sistema web de gestión de una biblioteca personal de libros.
   - Con la caché de Vite en frío, la primera ejecución E2E puede fallar por una recarga de página; repetir antes de investigar.
 - **Cámara en el celular:** `npm run dev:mobile` levanta Vite con HTTPS en la red local y la API por el proxy `/api` (`VITE_PROXY_TARGET`).
 - **Keepalive de Oracle:** el workflow `.github/workflows/oracle-keepalive.yml` llama todos los días a `GET /health/db`; se puede ejecutar a mano con `gh workflow run oracle-keepalive.yml --ref main`.
-- **Funcionalidad pendiente del top 3:** recomendaciones y resúmenes con IA. **Deuda técnica:** CI de tests en PRs, consultas N+1 de autores en `GET /books/`, paginación y exportar/importar CSV.
+- **Funcionalidad pendiente del top 3:** resúmenes con IA (Fase 2). Las recomendaciones (Fase 1) están en `docs/recomendaciones-ia.md`. **Deuda técnica:** CI de tests en PRs, consultas N+1 de autores en `GET /books/`, paginación y exportar/importar CSV.

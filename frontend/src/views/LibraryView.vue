@@ -67,6 +67,8 @@
         <button type="button" class="btn btn-sm btn-outline-primary" @click="clearAll">Mostrar todos</button>
       </div>
 
+      <RecommendationsSection @added="onRecommendationAdded" />
+
       <div class="card search-panel mb-4">
         <div class="card-body p-3 p-md-4">
           <div class="input-group mb-2">
@@ -178,6 +180,7 @@ import { useBooksStore } from '@/stores/books'
 import BookCard from '@/components/BookCard.vue'
 import BookTable from '@/components/BookTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import RecommendationsSection from '@/components/RecommendationsSection.vue'
 import { useStatsStore } from '@/stores/stats'
 
 const router = useRouter()
@@ -239,6 +242,10 @@ function clearAll() {
     router.replace({ name: 'Library' })
   }
   booksStore.fetchBooks()
+}
+
+function onRecommendationAdded(book) {
+  toastMessage.value = `«${book.title}» se agregó a Quiero leer.`
 }
 
 function handleLogout() {

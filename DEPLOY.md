@@ -34,6 +34,20 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
+Recomendaciones con IA (secretos: pegarlos directamente en Render):
+
+```env
+GEMINI_API_KEY=clave_de_google_ai_studio
+GROQ_API_KEY=clave_de_groq
+AI_PROVIDER_ORDER=gemini,groq
+AI_DAILY_LIMIT=5
+```
+
+`AI_GEMINI_MODEL` (`gemini-3.5-flash-lite`) y `AI_GROQ_MODEL`
+(`openai/gpt-oss-120b`) tienen valor por defecto. Sin ninguna clave, la sección
+«Para ti» responde que no está configurada. La migración 009 debe estar
+aplicada antes de desplegar este código.
+
 ### Importante
 - `ALLOWED_ORIGINS` debe incluir exactamente el dominio público del frontend en Vercel.
 - El dominio canónico de producción es `https://biblioteca-personal.site`.
@@ -60,6 +74,13 @@ Importa el repo en Vercel y configura:
 - Root directory: `frontend`
 - Build command: `npm run build`
 - Output directory: `dist`
+- Rama de producción: `main` (Settings → Environments → Production → Branch Tracking)
+
+**Importante:** la rama de producción debe ser `main`, igual que en Render. Hasta el 23 de noviembre
+de 2026 estaba configurada como `development`, así que cada merge a `development` se publicaba en
+`biblioteca-personal.site` antes que la API y las migraciones. Si cambias esa rama, vuelve a
+desplegar en producción el último commit de `main` y confirma que los merges a `development`
+generan solo despliegues Preview.
 
 Añade esta variable de entorno:
 
