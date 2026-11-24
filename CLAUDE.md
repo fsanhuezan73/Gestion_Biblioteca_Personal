@@ -34,7 +34,7 @@ Sistema web de gestión de una biblioteca personal de libros.
 5. Después de un merge a `main`: comprobar el despliegue en Render (que el endpoint nuevo aparezca en `/openapi.json`) y en Vercel, y revisar los logs.
 6. **Etiquetar las publicaciones funcionales verificadas.** Después de verificar en producción los servicios afectados y antes de limpiar las ramas, crear un tag anotado `prod-AAAA-MM-DD-descripcion` sobre el commit exacto publicado de `main`. Incluir en el mensaje el cambio y las migraciones aplicadas, si corresponde. Publicar únicamente ese tag en `origin` y verificar que en GitHub apunta al mismo commit. Conservar los tags publicados como referencias históricas. Los cambios exclusivos de documentación se identifican por su PR.
 7. **Revisar y limpiar ramas después de publicar.** Cuando una mejora, nueva funcionalidad, corrección o cambio de documentación iniciado desde `development` esté integrado en `main` en GitHub y se haya verificado el despliegue, revisar las ramas locales y remotas.
-   - Actualizar las referencias con `git fetch --prune origin`. Conservar `main` y `development` y sincronizar sus copias locales con `--ff-only` cuando solo estén atrasadas. Si hay estado local sin guardar o una rama está divergida, conservarlo y reportarlo.
+   - Actualizar las referencias con `git fetch --prune origin`. Conservar `main` y `development` y sincronizar sus copias locales con `--ff-only` cuando solo estén atrasadas. Si hay estado local sin guardar o una rama está divergida, conservarlo y reportarlo. Es normal que `development` aparezca atrasada respecto de `main` por los merge commits de los PR `development → main`: no es una divergencia y no hay que corregirlo.
    - Verificar que la punta local y la remota de cada rama de trabajo a limpiar estén incluidas en `origin/main`, que no haya PR abiertos que la usen y que no esté activa en ningún worktree. Cambiar primero a `development` si la rama está activa en el checkout actual.
    - Borrar únicamente las ramas verificadas, sin forzar el borrado local. Si una rama tiene trabajo pendiente o su integración es incierta, conservarla. Informar qué se sincronizó, qué se borró y qué quedó pendiente.
 
@@ -65,8 +65,8 @@ Sistema web de gestión de una biblioteca personal de libros.
 | `BIBLIOTECA_TEST` | Pruebas de migraciones y validaciones | `backend/.env.test` |
 
 - **Ojo:** `backend/.env` apunta a producción. Un backend local con `.env` usa datos reales. Para pruebas, cargar `.env.test`; las variables de entorno tienen prioridad sobre el archivo `.env`.
-- **Migraciones:** `backend/sql/NNN_*.sql`; las 001–009 están aplicadas en ambos esquemas. Nunca aplicarlas automáticamente al iniciar la app. Para una nueva:
-  1. Crear el archivo siguiente (`010_…`). No modificar una migración ya aplicada.
+- **Migraciones:** `backend/sql/NNN_*.sql`. Toda migración que llega a `main` ya está aplicada en ambos esquemas, porque se aplica antes de desplegar el código que la necesita. El tag `prod-*` de cada publicación registra las migraciones aplicadas. Nunca aplicarlas automáticamente al iniciar la app. Para una nueva:
+  1. Usar el número siguiente al mayor de `backend/sql/`, revisando también las ramas abiertas para no repetirlo. No modificar una migración ya aplicada.
   2. Confirmar `SESSION_USER` y `CURRENT_SCHEMA` → respaldar → aplicar en TEST → validar.
   3. **Con aprobación del usuario**, respaldar y aplicar en PERSONAL. Comparar la estructura con TEST y los datos con el respaldo.
   4. Aplicar la migración **antes** de desplegar el código que la necesita.
