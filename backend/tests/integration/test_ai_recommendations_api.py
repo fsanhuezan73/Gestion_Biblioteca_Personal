@@ -280,6 +280,17 @@ def test_get_returns_last_result_with_fresh_library_flag(api):
     assert all(call.args[1] == {"user_id": 42} for call in cursor.execute.call_args_list)
 
 
+def test_get_accepts_result_already_decoded_by_oracledb(api):
+    """Oracle 26ai entrega el CLOB con IS JSON como lista de Python, no como texto."""
+    client, cursor, _, _ = api
+    stored = [{"title": "Aura", "authors": ["Carlos Fuentes"], "reason": "r"}]
+    cursor.fetchall.return_value = LIBRARY_ROWS
+    cursor.fetchone.side_effect = [(stored, "groq", "openai/gpt-oss-120b", datetime(2026, 11, 23, 15), 1,
+                                    datetime(2026, 11, 23))]
+    data = client.get("/api/v1/ai/recommendations").json()
+    assert [b["title"] for b in data["recommendations"]] == ["Aura"]
+
+
 def test_get_without_previous_result(api):
     client, cursor, _, _ = api
     cursor.fetchall.return_value = LIBRARY_ROWS[:1]

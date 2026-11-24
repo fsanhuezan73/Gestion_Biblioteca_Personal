@@ -144,12 +144,15 @@ def _save_result(user_id: int, result_json: str, provider: str, model: str, day,
 # ---------------------------------------------------------------------------
 
 def _stored_books(result) -> list[dict]:
-    text = result.read() if hasattr(result, "read") else result
-    try:
-        data = json.loads(text) if text else []
-    except ValueError:
-        logger.warning("Resultado de recomendaciones guardado no es JSON válido")
-        return []
+    """El CLOB con restricción IS JSON puede llegar como texto, LOB o ya decodificado
+    (python-oracledb con Oracle 23ai/26ai entrega la lista directamente)."""
+    data = result.read() if hasattr(result, "read") else result
+    if isinstance(data, (bytes, str)):
+        try:
+            data = json.loads(data) if data else []
+        except ValueError:
+            logger.warning("Resultado de recomendaciones guardado no es JSON válido")
+            return []
     return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
 

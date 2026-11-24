@@ -73,6 +73,53 @@ Los modelos se cambian con `AI_GEMINI_MODEL` y `AI_GROQ_MODEL` sin tocar el cód
   existentes quedaron byte a byte iguales al respaldo. `AI_RECOMMENDATIONS` está
   vacía.
 
+- Consultas reales del endpoint validadas contra TEST (23-11-2026):
+  - Guardado (INSERT y luego UPDATE) y lectura del CLOB con tildes.
+  - Contador diario y límite revisado bajo bloqueo.
+  - Reinicio del contador al cambiar de día.
+  - La fila de prueba se borró al terminar.
+- Esta validación encontró que python-oracledb entrega el CLOB con `IS JSON` ya
+  decodificado como lista. Está corregido y cubierto por un test.
+
+## Prueba local contra BIBLIOTECA_TEST
+
+`./start-test.sh` levanta el backend en el puerto 8001 contra `BIBLIOTECA_TEST`
+y el frontend en el 5174. No interfiere con `npm run dev` (5173) ni con
+producción.
+
+- El script carga `backend/.env.test`, `backend/.env.googlebooks` y
+  `backend/.env.ai` como variables de entorno, que tienen prioridad sobre
+  `backend/.env` (producción).
+- Se cancela si `ORACLE_USER` no es `BIBLIOTECA_TEST`.
+- Al arrancar indica qué claves están presentes, sin mostrar sus valores.
+
+### Pasos
+
+1. Guardar las claves de IA en `backend/.env.ai`, ignorado por Git y sin
+   mostrarlas en pantalla. Copia la clave de Gemini (Google AI Studio) y ejecuta:
+
+   ```bash
+   cd backend && touch .env.ai && chmod 600 .env.ai
+   printf 'GEMINI_API_KEY=%s\n' "$(pbpaste)" >> .env.ai
+   ```
+
+   Copia la clave de Groq y ejecuta:
+
+   ```bash
+   printf 'GROQ_API_KEY=%s\n' "$(pbpaste)" >> .env.ai
+   ```
+
+   Opcional: para probar solo el respaldo, agrega `AI_PROVIDER_ORDER=groq`. Para
+   tener más intentos en las pruebas, agrega `AI_DAILY_LIMIT=20`.
+2. Desde la raíz del repo, ejecutar `./start-test.sh`.
+3. Abrir http://localhost:5174 y crear una cuenta de prueba en «Registrarse». La
+   cuenta queda en `BIBLIOTECA_TEST`.
+4. Agregar al menos 3 libros con estado «Leído» y asignarles estrellas.
+5. Pulsar «Recomiéndame qué leer». La primera respuesta puede tardar entre 10 y
+   30 s. En la terminal, el log
+   `Recomendaciones: <proveedor> propuso N, M verificadas` indica qué proveedor
+   respondió.
+
 ### Pendiente para producción
 
 1. Con aprobación del usuario: respaldar y aplicar 009 en `BIBLIOTECA_PERSONAL`,
