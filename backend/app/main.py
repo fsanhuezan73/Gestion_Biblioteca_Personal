@@ -12,6 +12,16 @@ from app.db.session import close_db_pool, get_db_connection, init_db_pool
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+# uvicorn solo configura sus propios loggers: sin esto, los INFO de la app
+# (p. ej. tiempos de las recomendaciones) no aparecen en la terminal ni en Render.
+_app_logger = logging.getLogger("app")
+if not _app_logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+    _app_logger.addHandler(_handler)
+    _app_logger.setLevel(logging.INFO)
+    _app_logger.propagate = False
 allowed_origins = [
     origin.strip()
     for origin in settings.allowed_origins.split(",")
