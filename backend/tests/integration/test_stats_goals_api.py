@@ -134,6 +134,7 @@ def set_stats_rows(cursor, *, goal=(24,), monthly=None, genres=None):
             (32, "Ficciones", "Borges", None, datetime(2026, 3, 2), None, None),
         ],
         [(2025,), (2026,)],
+        [("physical", 15), ("kindle", 8), (None, 3)],
     ]
 
 
@@ -164,6 +165,7 @@ def test_stats_aggregates_year_and_library(api):
 
     lib = data["library"]
     assert lib["total_books"] == 20
+    assert lib["formats"] == {"physical": 15, "kindle": 8, "apple_books": 0, "without_format": 3}
     assert (lib["want_to_read"], lib["reading"], lib["read"]) == (5, 2, 13)
     assert lib["read_without_date"] == 3
     assert lib["avg_rating"] == 4.25
@@ -187,6 +189,7 @@ def test_stats_scopes_every_query_to_user_and_year(api):
     sqls = [call.args[0] for call in cursor.execute.call_args_list]
     assert all("user_id = :user_id" in sql for sql in sqls)
     assert all("deleted_at IS NULL" in sql for sql in sqls if "FROM books" in sql)
+    assert all_params(cursor)[-1] == {"user_id": 42}
 
 
 def test_stats_empty_year_without_goal(api):
@@ -221,8 +224,8 @@ def test_stats_rejects_invalid_year(api):
 # Fechas automáticas en libros
 # ---------------------------------------------------------------------------
 
-def book_row(status="Leído", started=None, finished=None):
-    return (101, "1984", None, 1949, None, None, None, None, status, None, None, started, finished, 328)
+def book_row(status="Leído", started=None, finished=None, formats=None):
+    return (101, "1984", None, 1949, None, None, None, None, status, None, None, started, finished, 328, formats)
 
 
 def update_params(cursor):
@@ -283,6 +286,75 @@ def test_put_without_date_changes_does_not_write_dates(api):
     assert update_params(cursor) == []
 
 
+@pytest.mark.parametrize("body,stored,existing,expected_formats,expected_writes", [
+    ({"title": "Nuevo"}, "kindle,physical", [], ["physical", "kindle"], []),
+    ({"formats": []}, None, [("kindle",)], [], [("DELETE", "kindle")]),
+    ({"formats": ["apple_books", "physical"]}, "apple_books,physical", [("physical",), ("kindle",)],
+     ["physical", "apple_books"], [("DELETE", "kindle"), ("INSERT", "apple_books")]),
+    ({"formats": ["kindle", "kindle"]}, "kindle", [("kindle",)], ["kindle"], []),
+])
+def test_put_formats_only_changes_requested_associations(api, body, stored, existing, expected_formats, expected_writes):
+    client, cursor, _ = api
+    if "formats" in body:
+        cursor.fetchone.side_effect = [(101, "Leído", None, None), (101,), book_row(formats=stored)]
+        cursor.fetchall.side_effect = [existing, []]
+    else:
+        cursor.fetchone.side_effect = [(101, "Leído", None, None), book_row(formats=stored)]
+        cursor.fetchall.return_value = []
+
+    response = client.put("/api/v1/books/101", json=body)
+    assert response.status_code == 200
+    calls = [call.args for call in cursor.execute.call_args_list]
+    assert any("FOR UPDATE" in sql for sql, _ in calls) == ("formats" in body)
+    assert response.json()["formats"] == expected_formats
+    assert [(sql.split()[0], params["code"]) for sql, params in calls
+            if sql.startswith(("DELETE FROM book_formats", "INSERT INTO book_formats"))] == expected_writes
+
+
+def test_format_updates_do_not_touch_foreign_or_deleted_books(api):
+    client, cursor, _ = api
+    cursor.fetchone.return_value = None
+    assert client.put("/api/v1/books/101", json={"formats": ["physical"]}).status_code == 404
+    (call,) = cursor.execute.call_args_list
+    assert "user_id = :user_id AND deleted_at IS NULL" in call.args[0]
+
+
+@pytest.mark.parametrize("method,url,body", [
+    ("get", "/api/v1/books/?format=audiobook", None),
+    ("get", "/api/v1/books/?format=kindle&without_format=true", None),
+    ("post", "/api/v1/books/", {"title": "1984", "authors": ["George Orwell"], "formats": ["ebook"]}),
+    ("put", "/api/v1/books/101", {"formats": None}),
+])
+def test_book_format_validation(api, method, url, body):
+    client, cursor, _ = api
+    assert client.request(method, url, json=body).status_code == 422
+    cursor.execute.assert_not_called()
+
+
+def test_list_books_combines_all_formats_with_other_filters(api):
+    client, cursor, _ = api
+    cursor.fetchall.return_value = []
+    response = client.get(
+        "/api/v1/books/?format=kindle&format=physical&format=physical&search=Dune&genre=Novela&reading_status=Leído"
+    )
+    assert response.status_code == 200
+    (call,) = cursor.execute.call_args_list
+    sql, params = call.args
+    assert "b.user_id = :user_id AND b.deleted_at IS NULL" in sql
+    assert sql.count("AND EXISTS (SELECT 1 FROM book_formats") == 2
+    assert params == {
+        "user_id": 42, "genre": "Novela", "reading_status": "Leído", "search": "Dune",
+        "format_0": "physical", "format_1": "kindle",
+    }
+
+
+def test_list_books_can_filter_without_format(api):
+    client, cursor, _ = api
+    cursor.fetchall.return_value = []
+    assert client.get("/api/v1/books/?without_format=true").status_code == 200
+    assert "AND NOT EXISTS (SELECT 1 FROM book_formats" in cursor.execute.call_args.args[0]
+
+
 @pytest.mark.parametrize("body,message", [
     ({"started_at": "2026-06-10", "finished_at": "2026-06-01"}, "anterior"),
     ({"finished_at": "2026-12-31"}, "futura"),
@@ -312,7 +384,8 @@ def insert_params(cursor):
 def test_create_read_book_dates(api, extra, expected):
     client, cursor, _ = api
     cursor.fetchall.return_value = [("George Orwell",)]
-    cursor.fetchone.side_effect = [(1,), (101,), book_row()]
+    cursor.var.return_value.getvalue.return_value = [101]
+    cursor.fetchone.side_effect = [(1,), book_row()]
     response = client.post("/api/v1/books/", json={
         "title": "1984", "authors": ["George Orwell"], "reading_status": "Leído", **extra,
     })

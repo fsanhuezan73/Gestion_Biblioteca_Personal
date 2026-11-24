@@ -10,14 +10,19 @@ from app.core.reading import as_date, dates_for_status_change, today, validate_r
 from app.core.security import get_current_user
 from app.db.session import get_db_connection
 from app.schemas.book import (
-    VALID_READING_STATUSES, BookCreate, BookOut, BookPersonalUpdate, BookSummary, BookUpdate,
-    IsbnCheckOut, IsbnLookupOut, IsbnMatch,
+    VALID_READING_STATUSES, BookCreate, BookFormat, BookOut, BookPersonalUpdate, BookSummary, BookUpdate,
+    IsbnCheckOut, IsbnLookupOut, IsbnMatch, normalize_book_formats,
 )
 
 router = APIRouter(prefix="/books", tags=["Libros"])
 
 # Sentinel: distingue "campo no enviado" de "campo enviado con valor None"
 _UNSET = object()
+
+_BOOK_FORMAT_LIST = """(
+    SELECT LISTAGG(bf.format_code, ',') WITHIN GROUP (ORDER BY bf.format_code)
+    FROM book_formats bf WHERE bf.book_id = b.id
+)"""
 
 
 # ---------------------------------------------------------------------------
@@ -100,10 +105,26 @@ def _fetch_reading_state(cursor, book_id: int, user_id: int):
     return row[1], as_date(row[2]), as_date(row[3])
 
 
+def _save_book_formats(cursor, book_id: int, formats: list[BookFormat], existing=()) -> None:
+    current = set(existing)
+    for code in existing:
+        if code not in formats:
+            cursor.execute(
+                "DELETE FROM book_formats WHERE book_id = :bid AND format_code = :code",
+                {"bid": book_id, "code": code},
+            )
+    for code in formats:
+        if code not in current:
+            cursor.execute(
+                "INSERT INTO book_formats (book_id, format_code) VALUES (:bid, :code)",
+                {"bid": book_id, "code": code},
+            )
+
+
 def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
     """Lee un libro completo con JOINs y retorna BookOut o None."""
     cursor.execute(
-        """
+        f"""
         SELECT b.id,
                b.title,
                b.isbn,
@@ -117,7 +138,8 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
                b.personal_notes,
                b.started_at,
                b.finished_at,
-               b.page_count
+               b.page_count,
+               {_BOOK_FORMAT_LIST}
         FROM books b
         LEFT JOIN genres     g ON g.id = b.genre_id
         LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -155,6 +177,7 @@ def _fetch_book_row(cursor, book_id: int) -> BookOut | None:
         started_at=as_date(row[11]),
         finished_at=as_date(row[12]),
         page_count=row[13],
+        formats=row[14].split(",") if row[14] else [],
         authors=authors,
     )
 
@@ -174,13 +197,18 @@ def list_books(
     genre: str | None = Query(None, description="Filtrar por género exacto"),
     reading_status: str | None = Query(None, description="Filtrar por estado de lectura"),
     without_finish_date: bool = Query(False, description="Solo libros leídos sin fecha de término"),
+    formats: list[BookFormat] | None = Query(None, alias="format", description="Incluir todos los formatos indicados"),
+    without_format: bool = Query(False, description="Solo libros sin formato registrado"),
 ):
     """HU-02 + HU-05: Retorna libros activos del usuario con búsqueda y filtros."""
+    if formats and without_format:
+        raise HTTPException(status_code=422, detail="Elige formatos o la opción Sin formato registrado")
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
         # Base query
-        sql = """
+        sql = f"""
             SELECT b.id,
                    b.title,
                    b.isbn,
@@ -193,7 +221,8 @@ def list_books(
                    b.rating,
                    b.started_at,
                    b.finished_at,
-                   b.page_count
+                   b.page_count,
+                   {_BOOK_FORMAT_LIST}
             FROM books b
             LEFT JOIN genres     g ON g.id = b.genre_id
             LEFT JOIN publishers p ON p.id = b.publisher_id
@@ -213,6 +242,17 @@ def list_books(
 
         if without_finish_date:
             sql += " AND b.reading_status = 'Leído' AND b.finished_at IS NULL"
+
+        if without_format:
+            sql += " AND NOT EXISTS (SELECT 1 FROM book_formats bf WHERE bf.book_id = b.id)"
+
+        for index, code in enumerate(normalize_book_formats(formats or [])):
+            param = f"format_{index}"
+            sql += (
+                " AND EXISTS (SELECT 1 FROM book_formats bf WHERE bf.book_id = b.id"
+                f" AND bf.format_code = :{param})"
+            )
+            bind[param] = code
 
         # Búsqueda libre: coincidencia parcial en título, autor, ISBN, año, género
         if search:
@@ -253,6 +293,7 @@ def list_books(
                 genre=r[4], publisher=r[5], created_at=r[6], cover_url=r[7],
                 reading_status=r[8], rating=r[9],
                 started_at=as_date(r[10]), finished_at=as_date(r[11]), page_count=r[12],
+                formats=r[13].split(",") if r[13] else [],
                 authors=authors,
             ))
     return result
@@ -298,12 +339,14 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
         # las operaciones FK (book_authors). Previene ORA-12860.
         conn.commit()
 
+        inserted_id = cursor.var(int)
         cursor.execute(
             """
             INSERT INTO books (user_id, title, isbn, year, genre_id, publisher_id, created_at, cover_url,
                                reading_status, started_at, finished_at, page_count)
             VALUES (:user_id, :title, :isbn, :pub_year, :genre_id, :publisher_id, SYSTIMESTAMP, :cover_url,
                     :reading_status, :started_at, :finished_at, :page_count)
+            RETURNING id INTO :inserted_id
             """,
             {
                 "user_id": current_user_id,
@@ -317,13 +360,10 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
                 "started_at": started_at,
                 "finished_at": finished_at,
                 "page_count": book_in.page_count,
+                "inserted_id": inserted_id,
             },
         )
-        cursor.execute(
-            "SELECT id FROM books WHERE user_id = :user_id AND title = :title ORDER BY created_at DESC FETCH FIRST 1 ROW ONLY",
-            {"user_id": current_user_id, "title": book_in.title},
-        )
-        book_id = cursor.fetchone()[0]
+        book_id = inserted_id.getvalue()[0]
 
         for aid in author_ids:
             cursor.execute(
@@ -331,6 +371,7 @@ def create_book(book_in: BookCreate, current_user_id: int = Depends(get_current_
                 {"bid": book_id, "aid": aid},
             )
 
+        _save_book_formats(cursor, book_id, book_in.formats)
         book = _fetch_book_row(cursor, book_id)
 
     return book
@@ -487,6 +528,17 @@ def update_book(
         # Commit catálogos para liberar bloqueos de índice antes de
         # las operaciones FK (book_authors). Previene ORA-12860.
         conn.commit()
+
+        if "formats" in updates:
+            cursor.execute(
+                "SELECT id FROM books WHERE id = :bid AND user_id = :user_id AND deleted_at IS NULL FOR UPDATE",
+                {"bid": book_id, "user_id": current_user_id},
+            )
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="Libro no encontrado")
+            cursor.execute("SELECT format_code FROM book_formats WHERE book_id = :bid", {"bid": book_id})
+            existing_formats = [row[0] for row in cursor.fetchall()]
+            _save_book_formats(cursor, book_id, updates["formats"], existing_formats)
 
         scalar_map = {
             "title": {"sql": "UPDATE books SET title = :title WHERE id = :bid", "param": "title"},

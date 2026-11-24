@@ -6,14 +6,16 @@ export const useBooksStore = defineStore('books', () => {
   const books = ref([])
   const loading = ref(false)
   const genres = ref([])
+  let latestListRequest = 0
 
   async function fetchBooks(params = {}) {
+    const request = ++latestListRequest
     loading.value = true
     try {
-      const { data } = await api.get('/books/', { params })
-      books.value = data
+      const { data } = await api.get('/books/', { params, paramsSerializer: { indexes: null } })
+      if (request === latestListRequest) books.value = data
     } finally {
-      loading.value = false
+      if (request === latestListRequest) loading.value = false
     }
   }
 

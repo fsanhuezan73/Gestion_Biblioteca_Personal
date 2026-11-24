@@ -31,6 +31,9 @@
             {{ book.reading_status || 'Quiero leer' }}
           </span>
         </div>
+        <div v-if="formats.length" class="d-flex flex-wrap gap-1 mt-2" data-test="book-formats">
+          <span v-for="label in formats" :key="label" class="badge text-bg-light border">{{ label }}</span>
+        </div>
       </div>
     </div>
   </RouterLink>
@@ -40,12 +43,14 @@
 import { computed } from 'vue'
 import BookRating from './BookRating.vue'
 import { readingSummary } from '@/utils/dates'
+import { formatLabels } from '@/utils/bookFormats'
 
 const props = defineProps({
   book: { type: Object, required: true },
 })
 
 const reading = computed(() => readingSummary(props.book))
+const formats = computed(() => formatLabels(props.book.formats))
 
 const statusBadgeClass = computed(() => {
   switch (props.book.reading_status) {
