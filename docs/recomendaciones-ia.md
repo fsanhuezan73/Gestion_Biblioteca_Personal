@@ -137,12 +137,23 @@ diseño original permitía, en el peor caso, más de 90 s (30 s por intento de I
 con reintento y respaldo). Por eso se agregó el presupuesto total de tiempo, los
 logs con tiempos y la recarga del resultado tras un error.
 
+## Migración 009 — BIBLIOTECA_PERSONAL (23-11-2026)
+
+- Aplicada con aprobación explícita del usuario. `SESSION_USER` y
+  `CURRENT_SCHEMA` confirmados como `BIBLIOTECA_PERSONAL`, sin
+  `AI_RECOMMENDATIONS` previa.
+- Respaldo lógico previo con SHA256 verificado en
+  `~/Backups/BibliotecaPersonal/20261124T012425Z-before-009/`.
+- Migración aplicada (8 sentencias). La estructura de `AI_RECOMMENDATIONS`
+  (columnas, restricciones, índices y comentarios) es idéntica a
+  `BIBLIOTECA_TEST`.
+- Instantánea posterior (`20261124T012500Z-after-009`): las 10 tablas existentes
+  quedaron byte a byte iguales al respaldo. `AI_RECOMMENDATIONS` está vacía.
+
 ### Pendiente para producción
 
-1. Con aprobación del usuario: respaldar y aplicar 009 en `BIBLIOTECA_PERSONAL`,
-   y comparar la estructura con TEST y los datos con el respaldo.
-2. Pegar `GEMINI_API_KEY` y `GROQ_API_KEY` en Render (lo hace el usuario).
-3. Mergear a `main` y comprobar que `/api/v1/ai/recommendations` aparece en
+1. Pegar `GEMINI_API_KEY` y `GROQ_API_KEY` en Render (lo hace el usuario).
+2. Mergear a `main` y comprobar que `/api/v1/ai/recommendations` aparece en
    `/openapi.json`.
 
 ## Pruebas
