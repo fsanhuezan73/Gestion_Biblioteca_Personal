@@ -305,13 +305,21 @@ const booksStore = useBooksStore()
 const showScanner = ref(false)
 const duplicates = ref([])
 
+// Apertura automática del escáner («Escanear libro» del menú). Se avisa al padre para
+// que consuma la señal (p. ej. quitando ?scan=1) y así cada nueva selección vuelva a abrirlo.
+function openAutoScan() {
+  if (!props.allowScan) return
+  showScanner.value = true
+  emit('auto-scan-opened')
+}
+
 onMounted(() => {
-  if (props.allowScan && props.autoScan) showScanner.value = true
+  if (props.autoScan) openAutoScan()
 })
 
 // «Escanear libro» desde el menú estando ya en «Añadir libro»: la vista se reutiliza.
 watch(() => props.autoScan, (value) => {
-  if (props.allowScan && value) showScanner.value = true
+  if (value) openAutoScan()
 })
 
 function handleScanned(isbn) {
@@ -330,7 +338,7 @@ async function checkDuplicates(rawIsbn) {
   } catch { /* la comprobación es solo informativa */ }
 }
 
-const emit = defineEmits(['submit'])
+const emit = defineEmits(['submit', 'auto-scan-opened'])
 
 const form = reactive({
   title: '',

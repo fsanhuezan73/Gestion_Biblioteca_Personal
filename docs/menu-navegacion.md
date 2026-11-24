@@ -12,8 +12,10 @@ Es un cambio solo de frontend: sin endpoints ni migraciones nuevos.
 - El menú se cierra al elegir una opción, al navegar (incluido atrás/adelante),
   con Esc o al hacer clic fuera. Se implementa solo con Vue, sin el JS de
   Bootstrap.
-- «Escanear libro» abre `/books/add?scan=1`. Si ya estás en «Añadir libro», el
-  formulario abre el escáner sin perder lo escrito.
+- «Escanear libro» abre `/books/add?scan=1`. Al abrirse el escáner, la vista
+  quita `?scan=1` con `router.replace` (sin entrada en el historial), así que
+  cada nueva selección vuelve a abrirlo, aunque ya estés en «Añadir libro» y sin
+  perder lo escrito. Desde ese momento el menú marca «Añadir libro».
 - `/library` muestra solo la colección. Las recomendaciones pasaron a la página
   **Para ti** (`/for-you`), que avisa si el servicio no está disponible.
 - «Estadísticas» y «Mi cuenta» ya no tienen el enlace «← Volver»; detalle,
@@ -38,8 +40,8 @@ queda visible al bajar, también en el celular con scroll horizontal.
 
 - Unitarias: `AppNavbar.spec.js` (opciones, página activa, cierre y logout) y
   `ForYouView.spec.js` (carga y servicio no disponible).
-- E2E: `tests/e2e/app-menu.spec.js` (menú, navegación, logout y encabezado
-  fijo con 40 libros). Se actualizaron los E2E de estadísticas, escáner,
+- E2E: `tests/e2e/app-menu.spec.js` (menú, navegación, reabrir el escáner
+  dos veces seguidas, logout y encabezado fijo con 40 libros). Se actualizaron los E2E de estadísticas, escáner,
   formatos y recomendaciones para navegar por el menú.
 - Revisión visual con Chrome a 1280, 430, 375 y 320 px de ancho. A 320 px el
   nombre se corta con «…», pero la barra queda en una línea.

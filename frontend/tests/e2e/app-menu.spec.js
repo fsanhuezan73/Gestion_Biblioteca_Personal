@@ -53,6 +53,17 @@ test('menú: opciones, navegación y «Cerrar sesión» fuera del menú', async 
   await expect(menu).toHaveCount(0)
   await expect(page.getByTestId('recommendations-unavailable')).toBeVisible()
 
+  // «Escanear libro» abre el escáner cada vez que se elige, aunque ya estés en «Añadir libro».
+  const scanner = page.getByRole('dialog', { name: 'Escanear código de barras' })
+  for (let i = 0; i < 2; i++) {
+    await toggle.click()
+    await page.getByTestId('menu-scan').click()
+    await expect(scanner).toBeVisible()
+    await expect(page).toHaveURL(/\/books\/add$/)
+    await scanner.getByRole('button', { name: 'Cerrar' }).click()
+    await expect(scanner).toBeHidden()
+  }
+
   // Las demás opciones navegan a su página.
   await toggle.click()
   await page.getByTestId('menu-add').click()

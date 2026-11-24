@@ -135,6 +135,18 @@ describe('BookForm · escáner', () => {
     await flushPromises()
     expect(wrapper.find('[data-test="scanner"]').exists()).toBe(true)
     expect(wrapper.find('#title').element.value).toBe('Borrador')
+    expect(wrapper.emitted('auto-scan-opened')).toHaveLength(1)
+  })
+
+  it('avisa al abrir el escáner automáticamente al montar', async () => {
+    const { flushPromises } = await import('@vue/test-utils')
+    const wrapper = mount(BookForm, {
+      props: { allowScan: true, autoScan: true },
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' }, BarcodeScanner: { template: '<div data-test="scanner" />' } } },
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-test="scanner"]').exists()).toBe(true)
+    expect(wrapper.emitted('auto-scan-opened')).toHaveLength(1)
   })
 
   it('sin allowScan no muestra el botón Escanear', () => {
