@@ -6,7 +6,7 @@ from app.core.reading import as_date, goal_progress, today
 from app.core.security import get_current_user
 from app.db.session import get_db_connection
 from app.schemas.stats import (
-    MAX_YEAR, MIN_YEAR, CurrentlyReading, GoalProgress, LabelCount, LibraryStats, MonthCount,
+    MAX_YEAR, MIN_YEAR, CurrentlyReading, FormatCounts, GoalProgress, LabelCount, LibraryStats, MonthCount,
     RatingCount, ReadBook, StatsOut, YearStats,
 )
 
@@ -189,6 +189,18 @@ def get_stats(
         )
         years = {int(r[0]) for r in cursor.fetchall()}
 
+        cursor.execute(
+            f"""
+            SELECT bf.format_code, COUNT(*)
+            FROM books b
+            LEFT JOIN book_formats bf ON bf.book_id = b.id
+            WHERE {_OWNED}
+            GROUP BY bf.format_code
+            """,
+            owner,
+        )
+        formats = FormatCounts(**{code or "without_format": count for code, count in cursor.fetchall()})
+
     books_read = sum(m.books for m in by_month)
     goal = GoalProgress(**goal_progress(goal_row[0], books_read, year, on)) if goal_row else None
 
@@ -213,6 +225,7 @@ def get_stats(
             rated_books=int(rated),
             ratings=ratings,
             genres=genres,
+            formats=formats,
             currently_reading=currently_reading,
         ),
         available_years=sorted(years | {on.year, year}, reverse=True),

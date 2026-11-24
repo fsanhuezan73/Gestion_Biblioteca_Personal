@@ -1,10 +1,19 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from pydantic import AfterValidator, BaseModel, Field, field_validator
+from typing import Annotated, List, Literal, Optional, get_args
 from datetime import date, datetime
 
 
 VALID_READING_STATUSES = ("Quiero leer", "Leyendo", "Leído")
 MAX_COVER_URL_LENGTH = 500  # books.cover_url VARCHAR2(500)
+BookFormat = Literal["physical", "kindle", "apple_books"]
+BOOK_FORMATS = get_args(BookFormat)
+
+
+def normalize_book_formats(formats: list[BookFormat]) -> list[BookFormat]:
+    return [code for code in BOOK_FORMATS if code in formats]
+
+
+BookFormats = Annotated[list[BookFormat], AfterValidator(normalize_book_formats)]
 
 
 def _clean_cover_url(value: str | None) -> str | None:
@@ -29,6 +38,7 @@ class BookCreate(BaseModel):
     started_at: Optional[date] = None
     finished_at: Optional[date] = None
     page_count: Optional[int] = Field(default=None, ge=1, le=100000)
+    formats: BookFormats = Field(default_factory=list)
 
     model_config = {"str_strip_whitespace": True}
 
@@ -50,6 +60,7 @@ class BookUpdate(BaseModel):
     started_at: Optional[date] = None
     finished_at: Optional[date] = None
     page_count: Optional[int] = Field(default=None, ge=1, le=100000)
+    formats: BookFormats = Field(default_factory=list)
 
     model_config = {"str_strip_whitespace": True}
 
@@ -74,6 +85,7 @@ class BookSummary(BaseModel):
     started_at: Optional[date] = None
     finished_at: Optional[date] = None
     page_count: Optional[int] = None
+    formats: BookFormats = Field(default_factory=list)
 
 
 class BookOut(BookSummary):

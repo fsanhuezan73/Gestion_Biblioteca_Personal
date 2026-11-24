@@ -57,6 +57,9 @@
           <li v-if="book.page_count" class="list-group-item px-0">
             <strong>Páginas:</strong> {{ book.page_count }}
           </li>
+          <li v-if="formats.length" class="list-group-item px-0">
+            <strong>Formato:</strong> {{ formats.join(', ') }}
+          </li>
           <li v-if="book.started_at" class="list-group-item px-0">
             <strong>Inicio de lectura:</strong> {{ formatDate(book.started_at) }}
           </li>
@@ -101,12 +104,14 @@ import { useBooksStore } from '@/stores/books'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BookPersonalDetails from '@/components/BookPersonalDetails.vue'
 import { daysBetween, formatDate, formatReadingDays } from '@/utils/dates'
+import { formatLabels } from '@/utils/bookFormats'
 
 const route = useRoute()
 const router = useRouter()
 const booksStore = useBooksStore()
 
 const book = ref(null)
+const formats = computed(() => formatLabels(book.value?.formats))
 const readingDays = computed(() => daysBetween(book.value?.started_at, book.value?.finished_at))
 const loading = ref(true)
 const showModal = ref(false)

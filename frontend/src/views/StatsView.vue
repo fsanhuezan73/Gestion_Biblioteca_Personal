@@ -130,6 +130,18 @@
           </div>
         </div>
 
+        <div v-if="library.formats" class="mb-4">
+          <StatBarChart
+            title="Tu biblioteca por formato"
+            subtitle="Un libro puede contar en más de un formato. El desglose incluye toda tu biblioteca."
+            :labels="formatCategories.map(({ label }) => label)"
+            :values="formatCategories.map(({ code }) => library.formats[code])"
+            horizontal
+            :height="200"
+            empty-text="Aún no tienes libros en tu biblioteca."
+          />
+        </div>
+
         <div class="row g-4">
           <div class="col-md-6">
             <div class="card h-100">
@@ -183,10 +195,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useStatsStore } from '@/stores/stats'
 import GoalProgress from '@/components/GoalProgress.vue'
 import StatBarChart from '@/components/StatBarChart.vue'
+import { BOOK_FORMATS, WITHOUT_FORMAT_LABEL } from '@/utils/bookFormats'
 import BookRating from '@/components/BookRating.vue'
 import { formatDate, formatReadingDays } from '@/utils/dates'
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const formatCategories = [...BOOK_FORMATS, { code: 'without_format', label: WITHOUT_FORMAT_LABEL }]
 
 const statsStore = useStatsStore()
 const year = ref(new Date().getFullYear())

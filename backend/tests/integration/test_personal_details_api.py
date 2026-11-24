@@ -10,7 +10,7 @@ from app.core.security import get_current_user
 
 
 def book_row(rating=None, notes=None):
-    return (101, "1984", None, 1949, None, None, None, None, "Quiero leer", rating, notes, None, None, None)
+    return (101, "1984", None, 1949, None, None, None, None, "Quiero leer", rating, notes, None, None, None, None)
 
 
 @pytest.fixture
@@ -137,7 +137,8 @@ def test_foreign_or_deleted_book_detail_does_not_reveal_notes(api):
 
 def test_library_returns_rating_without_fetching_personal_notes(api):
     client, cursor, _ = api
-    cursor.fetchall.side_effect = [[book_row(4)[:10] + (None, None, None)], [("George Orwell",)]]
+    row = book_row(4)
+    cursor.fetchall.side_effect = [[row[:10] + row[11:]], [("George Orwell",)]]
     response = client.get("/api/v1/books/")
     assert response.status_code == 200
     assert response.json()[0]["rating"] == 4

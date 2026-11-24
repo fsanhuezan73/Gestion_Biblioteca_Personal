@@ -1,6 +1,7 @@
-from contextlib import contextmanager
-from unittest.mock import patch
+from contextlib import contextmanager, nullcontext
+from unittest.mock import Mock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints.books import get_current_user
@@ -14,6 +15,9 @@ class FakeCursor:
 
     def execute(self, *args, **kwargs):
         return None
+
+    def var(self, _type):
+        return Mock(**{"getvalue.return_value": [101]})
 
     def fetchone(self):
         if not self.fetchone_values:
@@ -59,7 +63,16 @@ def clear_overrides():
     app.dependency_overrides.clear()
 
 
-def test_create_book_success():
+@pytest.mark.parametrize("extra,stored,expected", [
+    ({}, None, []),
+    ({"formats": ["kindle"]}, "kindle", ["kindle"]),
+    (
+        {"formats": ["kindle", "apple_books", "physical", "kindle"]},
+        "apple_books,kindle,physical",
+        ["physical", "kindle", "apple_books"],
+    ),
+])
+def test_create_book_success(extra, stored, expected):
     client = build_client()
     override_user()
 
@@ -70,7 +83,6 @@ def test_create_book_success():
         (22,),
         None,
         (33,),
-        (101,),
         (
             101,
             "1984",
@@ -86,15 +98,15 @@ def test_create_book_success():
             None,
             None,
             None,
+            stored,
         ),
     ]
     fetchall_values = [[("George Orwell",)]]
 
     with patch("app.api.v1.endpoints.books.get_db_connection") as mock_db:
-        mock_db.return_value = fake_db_connection(
-            fetchone_values=fetchone_values,
-            fetchall_values=fetchall_values,
-        )
+        conn = FakeConnection(fetchone_values, fetchall_values)
+        conn.cursor_obj.execute = Mock()
+        mock_db.return_value = nullcontext(conn)
 
         response = client.post(
             "/api/v1/books/",
@@ -107,12 +119,16 @@ def test_create_book_success():
                 "publisher": "Secker & Warburg",
                 "cover_url": "https://example.com/cover.jpg",
                 "reading_status": "Quiero leer",
+                **extra,
             },
         )
 
     clear_overrides()
     assert response.status_code == 201
     assert response.json()["title"] == "1984"
+    assert response.json()["formats"] == expected
+    writes = [call.args[1] for call in conn.cursor_obj.execute.call_args_list if "INSERT INTO book_formats" in call.args[0]]
+    assert writes == [{"bid": 101, "code": code} for code in expected]
     assert response.json()["authors"] == ["George Orwell"]
     assert response.json()["genre"] == "Ciencia ficción"
 
@@ -154,6 +170,7 @@ def test_list_books_returns_user_books():
                 None,
                 None,
                 None,
+                "apple_books,physical",
             )
         ],
         [("George Orwell",)],
@@ -172,3 +189,4 @@ def test_list_books_returns_user_books():
     assert isinstance(response.json(), list)
     assert response.json()[0]["title"] == "1984"
     assert response.json()[0]["authors"] == ["George Orwell"]
+    assert response.json()[0]["formats"] == ["physical", "apple_books"]

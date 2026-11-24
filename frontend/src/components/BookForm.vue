@@ -264,6 +264,16 @@
 
     <div v-if="apiError" class="alert alert-danger py-2" role="alert">{{ apiError }}</div>
 
+    <fieldset class="mb-3">
+      <legend class="form-label fs-6">Formato</legend>
+      <div class="d-flex flex-wrap column-gap-3 row-gap-1">
+        <label v-for="{ code, label } in BOOK_FORMATS" :key="code" class="form-check mb-0">
+          <input v-model="form.formats" type="checkbox" class="form-check-input" :value="code" />
+          <span class="form-check-label">{{ label }}</span>
+        </label>
+      </div>
+    </fieldset>
+
     <button type="submit" class="btn btn-primary w-100" :disabled="loading || coverUploading || coverProcessing">
       <span v-if="loading || coverUploading" class="spinner-border spinner-border-sm me-2" />
       {{ coverUploading ? 'Subiendo portada…' : submitLabel }}
@@ -277,6 +287,7 @@ import { useBooksStore } from '@/stores/books'
 import { toIsbn13 } from '@/utils/isbn'
 import { datesForStatus, readingDatesError, todayISO } from '@/utils/dates'
 import { CoverImageError, compressCoverImage } from '@/utils/images'
+import { BOOK_FORMATS } from '@/utils/bookFormats'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -326,6 +337,7 @@ const form = reactive({
   cover_url: '',
   reading_status: 'Quiero leer',
   page_count: null,
+  formats: [],
   started_at: '',
   finished_at: '',
 })
@@ -348,6 +360,7 @@ watch(
       form.cover_url = data.cover_url ?? ''
       form.reading_status = data.reading_status ?? 'Quiero leer'
       form.page_count = data.page_count ?? null
+      form.formats = [...(data.formats ?? [])]
       form.started_at = data.started_at ?? ''
       form.finished_at = data.finished_at ?? ''
     }
@@ -531,6 +544,7 @@ async function handleSubmit() {
     cover_url: form.cover_url || null,
     reading_status: form.reading_status || 'Quiero leer',
     page_count: form.page_count || null,
+    formats: [...form.formats],
     started_at: visibleDates().started_at || null,
     finished_at: visibleDates().finished_at || null,
   })
