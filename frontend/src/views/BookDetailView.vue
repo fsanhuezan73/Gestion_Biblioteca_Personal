@@ -1,5 +1,5 @@
 <template>
-  <div class="container py-4 py-md-5" style="max-width: 760px">
+  <div class="container py-4" style="max-width: 760px">
     <RouterLink to="/library" class="btn btn-outline-secondary btn-sm mb-4">← Volver</RouterLink>
 
     <div v-if="loading" class="text-center py-5">

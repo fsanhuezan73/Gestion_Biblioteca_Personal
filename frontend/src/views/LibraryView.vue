@@ -1,34 +1,6 @@
 <template>
   <div class="app-shell">
-    <div class="container py-4 py-md-5">
-      <nav class="app-navbar navbar navbar-expand-lg navbar-light bg-white px-3 py-2 mb-4 mb-md-5">
-        <RouterLink to="/library" class="navbar-brand d-flex align-items-center gap-2 mb-0 text-decoration-none">
-          <span class="brand-mark">📚</span>
-          <span class="fw-bold fs-5 text-dark">Biblioteca Personal</span>
-        </RouterLink>
-        <div class="ms-auto d-flex flex-wrap justify-content-end align-items-center gap-2">
-          <RouterLink to="/stats" class="btn btn-outline-secondary btn-sm">
-            📊 Estadísticas
-          </RouterLink>
-          <RouterLink to="/account" class="btn btn-outline-secondary btn-sm">
-            Mi cuenta
-          </RouterLink>
-          <RouterLink
-            :to="{ name: 'AddBook', query: { scan: '1' } }"
-            class="btn btn-outline-primary btn-sm"
-            data-test="scan-shortcut"
-          >
-            📷 Escanear
-          </RouterLink>
-          <RouterLink to="/books/add" class="btn btn-primary btn-sm">
-            + Añadir libro
-          </RouterLink>
-          <button class="btn btn-outline-secondary btn-sm" @click="handleLogout">
-            Cerrar sesión
-          </button>
-        </div>
-      </nav>
-
+    <div class="container py-4">
       <div
         v-if="toastMessage"
         class="alert alert-success alert-dismissible fade show"
@@ -66,8 +38,6 @@
         <span>Mostrando libros leídos sin fecha de término. Abre cada uno y usa «Editar» para agregarla.</span>
         <button type="button" class="btn btn-sm btn-outline-primary" @click="clearAll">Mostrar todos</button>
       </div>
-
-      <RecommendationsSection @added="onRecommendationAdded" />
 
       <div class="card search-panel mb-4">
         <div class="card-body p-3 p-md-4">
@@ -200,18 +170,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { useBooksStore } from '@/stores/books'
 import BookCard from '@/components/BookCard.vue'
 import BookTable from '@/components/BookTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import RecommendationsSection from '@/components/RecommendationsSection.vue'
 import { useStatsStore } from '@/stores/stats'
 import { BOOK_FORMATS, WITHOUT_FORMAT_LABEL } from '@/utils/bookFormats'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const booksStore = useBooksStore()
 const statsStore = useStatsStore()
 
@@ -285,16 +252,6 @@ function clearAll() {
     router.replace({ name: 'Library' })
   }
   booksStore.fetchBooks()
-}
-
-function onRecommendationAdded(book) {
-  toastMessage.value = `«${book.title}» se agregó a Quiero leer.`
-  if (hasFormatFilter.value) applyFilters()
-}
-
-function handleLogout() {
-  authStore.logout()
-  router.push('/login')
 }
 </script>
 

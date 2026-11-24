@@ -1,5 +1,5 @@
 <template>
-  <div class="container py-4 py-md-5">
+  <div class="container py-4">
     <div class="d-flex align-items-center mb-4">
       <RouterLink to="/library" class="btn btn-outline-secondary btn-sm me-3">← Volver</RouterLink>
       <div>
@@ -17,6 +17,7 @@
           :api-error="apiError"
           submit-label="Guardar libro"
           @submit="handleSubmit"
+          @auto-scan-opened="consumeScanQuery"
         />
       </div>
     </div>
@@ -34,6 +35,16 @@ const route = useRoute()
 const booksStore = useBooksStore()
 const loading = ref(false)
 const apiError = ref('')
+
+// Quita ?scan=1 sin crear una entrada en el historial: así «Escanear libro» del menú
+// cambia la URL otra vez y vuelve a abrir el escáner aunque ya estés en esta página.
+function consumeScanQuery() {
+  if (route.query.scan === '1') {
+    const query = { ...route.query }
+    delete query.scan
+    router.replace({ name: 'AddBook', query })
+  }
+}
 
 async function handleSubmit(formData) {
   apiError.value = ''

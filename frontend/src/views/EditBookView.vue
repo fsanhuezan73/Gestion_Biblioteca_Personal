@@ -1,5 +1,5 @@
 <template>
-  <div class="container py-4 py-md-5">
+  <div class="container py-4">
     <div class="d-flex align-items-center mb-4">
       <RouterLink :to="`/books/${route.params.id}`" class="btn btn-outline-secondary btn-sm me-3">
         ← Volver

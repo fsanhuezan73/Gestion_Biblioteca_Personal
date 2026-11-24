@@ -1,7 +1,8 @@
 <template>
-  <div class="table-responsive">
+  <!-- Scroll propio (vertical y horizontal) para que el encabezado quede fijo con position: sticky. -->
+  <div class="table-responsive book-table-scroll" data-test="book-table-scroll">
     <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
+      <thead class="table-light book-table-head">
         <tr>
           <th style="width: 56px"></th>
           <th>Título</th>
@@ -81,6 +82,17 @@ function statusClass(status) {
 </script>
 
 <style scoped>
+.book-table-scroll {
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  border-radius: inherit;
+}
+.book-table-head th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
 .book-row {
   transition: background-color 0.15s ease;
 }

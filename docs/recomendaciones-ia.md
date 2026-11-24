@@ -1,6 +1,6 @@
 # Recomendaciones con IA (Fase 1)
 
-Botón «Recomiéndame qué leer» en la sección **Para ti** de la biblioteca. Devuelve
+Botón «Recomiéndame qué leer» en la página **Para ti** (`/for-you`, desde el menú). Devuelve
 hasta 5 libros reales, cada uno con título, autor, motivo y sinopsis, a costo $0.
 La Fase 2 (resúmenes) queda fuera de alcance.
 
