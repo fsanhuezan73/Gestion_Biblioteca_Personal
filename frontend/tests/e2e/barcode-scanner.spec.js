@@ -52,7 +52,8 @@ for (const mode of ['nativo', 'WebAssembly']) test(`escanear (${mode}): completa
   })
 
   await page.goto('/library')
-  await page.getByRole('link', { name: '📷 Escanear' }).click()
+  await page.getByRole('button', { name: 'Abrir menú' }).click()
+  await page.getByRole('link', { name: 'Escanear libro' }).click()
   await expect(page.getByRole('dialog', { name: 'Escanear código de barras' })).toBeVisible()
 
   // El escáner se cierra solo al detectar el código.

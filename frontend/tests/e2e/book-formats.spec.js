@@ -99,6 +99,7 @@ test('registrar formatos, combinarlos en el filtro y consultar su desglose', asy
     expect(box.x + box.width).toBeLessThanOrEqual(container.x + container.width)
   }
 
+  await page.getByRole('button', { name: 'Abrir menú' }).click()
   await page.getByRole('link', { name: /Estadísticas/ }).click()
   const distribution = page.locator('table').filter({ hasText: 'Tu biblioteca por formato' })
   await expect(distribution.locator('tbody td:nth-child(2)')).toHaveText(['1', '2', '1', '1'])

@@ -66,6 +66,12 @@ h1, h2, h3, .display-font {
     var(--canvas);
 }
 
+/* Las vistas con su propio .app-shell, dentro del layout con menú, no repiten el fondo. */
+.app-shell .app-shell {
+  min-height: 0;
+  background: none;
+}
+
 .app-navbar {
   border: 1px solid var(--border);
   border-radius: 1rem;

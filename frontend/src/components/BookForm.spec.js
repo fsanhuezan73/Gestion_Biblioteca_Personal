@@ -123,6 +123,20 @@ describe('BookForm · escáner', () => {
     expect(wrapper.text()).toContain('Libro no encontrado en Open Library ni en Google Books')
   })
 
+  it('abre el escáner si autoScan cambia a true sin perder lo escrito', async () => {
+    const { flushPromises } = await import('@vue/test-utils')
+    const wrapper = mount(BookForm, {
+      props: { allowScan: true, autoScan: false },
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' }, BarcodeScanner: { template: '<div data-test="scanner" />' } } },
+    })
+    await wrapper.find('#title').setValue('Borrador')
+    expect(wrapper.find('[data-test="scanner"]').exists()).toBe(false)
+    await wrapper.setProps({ autoScan: true })
+    await flushPromises()
+    expect(wrapper.find('[data-test="scanner"]').exists()).toBe(true)
+    expect(wrapper.find('#title').element.value).toBe('Borrador')
+  })
+
   it('sin allowScan no muestra el botón Escanear', () => {
     const wrapper = mount(BookForm)
     expect(wrapper.find('[data-test="open-scanner"]').exists()).toBe(false)

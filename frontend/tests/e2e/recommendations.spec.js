@@ -44,7 +44,13 @@ test('recomendaciones: generar, ver motivo y sinopsis, y agregar a Quiero leer',
     return route.fulfill({ status: 404, json: {} })
   })
 
+  // «Para ti» ya no aparece en la colección: se abre desde el menú.
   await page.goto('/library')
+  await expect(page.getByText('Rayuela')).toBeVisible()
+  await expect(page.getByTestId('recommendations')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Abrir menú' }).click()
+  await page.getByRole('link', { name: 'Para ti' }).click()
+  await expect(page).toHaveURL(/\/for-you$/)
   const section = page.getByTestId('recommendations')
   await expect(section.getByTestId('ai-label')).toHaveText('Generado por IA')
   await expect(section.getByTestId('remaining')).toHaveText('Te quedan 5 de 5 hoy')
@@ -79,7 +85,7 @@ test('recomendaciones: sin libros valorados suficientes no se puede generar', as
     if (path.endsWith('/books/genres')) return route.fulfill({ json: [] })
     return route.abort()
   })
-  await page.goto('/library')
+  await page.goto('/for-you')
   await expect(page.getByTestId('not-enough')).toContainText('llevas 1')
   await expect(page.getByTestId('generate-recommendations')).toBeDisabled()
 })

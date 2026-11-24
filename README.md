@@ -258,6 +258,15 @@ proveedor elegido. La configuración y las pruebas actuales no envían correos
 reales. Cuando se habilite, el endpoint de solicitud siempre responderá con un
 mensaje genérico; los errores SMTP se registran sin dirección ni token.
 
+## Menú de navegación
+
+Con la sesión iniciada, todas las páginas muestran una barra con el botón **☰**
+en la esquina superior izquierda y **Cerrar sesión** a la derecha. El menú abre
+Mi colección, Para ti, Estadísticas, Escanear libro, Añadir libro y Mi cuenta.
+La página inicial (`/library`) muestra solo la colección. En la vista **Tabla**,
+la fila de encabezados queda fija al hacer scroll. Ver
+[validación del menú](docs/menu-navegacion.md).
+
 ## Estadísticas y metas de lectura
 
 La página **📊 Estadísticas** (`/stats`) muestra la meta anual con su ritmo,
@@ -278,7 +287,7 @@ Ver [validación de la funcionalidad](docs/estadisticas-metas.md).
 
 ## Escanear el código de barras
 
-En **Añadir libro** (o con **📷 Escanear** en la barra de la biblioteca) se abre
+En **Añadir libro** (o con **📷 Escanear libro** en el menú) se abre
 la cámara trasera; al leer el EAN-13 del libro (978/979) se completa el ISBN,
 se buscan los datos en Open Library y se avisa si el libro ya está en tu
 biblioteca. Incluye cambio de cámara, linterna (si el equipo la soporta) y
@@ -312,7 +321,7 @@ otra; los resultados completos se guardan 6 horas en memoria.
 
 ## Recomendaciones con IA («Para ti»)
 
-En la biblioteca, el botón **«Recomiéndame qué leer»** sugiere hasta 5 libros,
+En la página **Para ti** (`/for-you`, desde el menú), el botón **«Recomiéndame qué leer»** sugiere hasta 5 libros,
 cada uno con motivo y sinopsis, y permite agregarlos a «Quiero leer».
 
 - La IA recibe solo título, autor, género y estrellas de hasta 40 libros leídos

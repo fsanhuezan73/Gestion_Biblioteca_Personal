@@ -309,6 +309,11 @@ onMounted(() => {
   if (props.allowScan && props.autoScan) showScanner.value = true
 })
 
+// «Escanear libro» desde el menú estando ya en «Añadir libro»: la vista se reutiliza.
+watch(() => props.autoScan, (value) => {
+  if (props.allowScan && value) showScanner.value = true
+})
+
 function handleScanned(isbn) {
   showScanner.value = false
   form.isbn = isbn
