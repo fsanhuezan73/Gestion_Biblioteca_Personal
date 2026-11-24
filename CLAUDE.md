@@ -32,6 +32,10 @@ Sistema web de gestión de una biblioteca personal de libros.
    - Frontend (`cd frontend`): `npm run lint`, `npm run test:run` y `npm run build`.
    - E2E: `npx playwright test` (ver la nota sobre Playwright más abajo).
 5. Después de un merge a `main`: comprobar el despliegue en Render (que el endpoint nuevo aparezca en `/openapi.json`) y en Vercel, y revisar los logs.
+6. **Revisar y limpiar ramas después de publicar.** Cuando una mejora, nueva funcionalidad, corrección o cambio de documentación iniciado desde `development` esté integrado en `main` en GitHub y se haya verificado el despliegue, revisar las ramas locales y remotas.
+   - Actualizar las referencias con `git fetch --prune origin`. Conservar `main` y `development` y sincronizar sus copias locales con `--ff-only` cuando solo estén atrasadas. Si hay estado local sin guardar o una rama está divergida, conservarlo y reportarlo.
+   - Verificar que la punta local y la remota de cada rama de trabajo a limpiar estén incluidas en `origin/main`, que no haya PR abiertos que la usen y que no esté activa en ningún worktree. Cambiar primero a `development` si la rama está activa en el checkout actual.
+   - Borrar únicamente las ramas verificadas, sin forzar el borrado local. Si una rama tiene trabajo pendiente o su integración es incierta, conservarla. Informar qué se sincronizó, qué se borró y qué quedó pendiente.
 
 ## Revisiones de IA de pago (Copilot, Codex)
 
