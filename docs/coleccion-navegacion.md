@@ -1,4 +1,4 @@
-# Menú de navegación
+# Menú de navegación y tabla de la colección
 
 Barra común para todas las páginas con sesión iniciada: botón **☰** en la
 esquina superior izquierda y **Cerrar sesión** a la derecha, fuera del menú.
@@ -29,19 +29,47 @@ En la vista **Tabla**, la tabla tiene scroll propio (alto máximo: la pantalla
 menos 6rem) y el `<thead>` usa `position: sticky`. Así la fila de encabezados
 queda visible al bajar, también en el celular con scroll horizontal.
 
+## Orden de la tabla
+
+Un clic en un encabezado ordena por esa columna de forma ascendente (▲); otro
+clic, descendente (▼). La columna activa se marca con `aria-sort`. El orden se
+hace en el navegador (`frontend/src/utils/bookSort.js`), sobre la colección ya
+filtrada, sin cambios en la API.
+
+- Mientras no se elige columna, se mantiene el orden de la API: el libro
+  agregado más recientemente primero.
+- Título, Autor (primer autor), Género e ISBN: alfabético en español, sin
+  distinguir mayúsculas ni tildes y con números naturales («Libro 2» antes que
+  «Libro 10»).
+- Año y Valoración: numérico.
+- Estado: en orden de lectura (Quiero leer → Leyendo → Leído); sin estado
+  cuenta como «Quiero leer».
+- Lectura: por la fecha que muestra la columna (término si está leído, inicio
+  si se está leyendo).
+- Los valores vacíos van siempre al final, en ambas direcciones. Los empates
+  se resuelven por título.
+- El orden se mantiene al cambiar entre «Cuadrícula» y «Tabla», pero no se
+  guarda al salir de la colección. La cuadrícula no se ordena.
+
 ## Archivos
 
 - `frontend/src/components/AppNavbar.vue`: barra y menú.
 - `frontend/src/App.vue`: muestra la barra en las rutas con `requiresAuth`.
 - `frontend/src/views/ForYouView.vue` y la ruta `ForYou` en el router.
-- `frontend/src/components/BookTable.vue`: encabezado fijo.
+- `frontend/src/components/BookTable.vue`: encabezado fijo y encabezados
+  ordenables; el estado del orden vive en `LibraryView.vue` (`v-model:sort`).
+- `frontend/src/utils/bookSort.js`: reglas de orden por columna.
 
 ## Validación
 
-- Unitarias: `AppNavbar.spec.js` (opciones, página activa, cierre y logout) y
-  `ForYouView.spec.js` (carga y servicio no disponible).
+- Unitarias: `AppNavbar.spec.js` (opciones, página activa, cierre y logout),
+  `ForYouView.spec.js` (carga y servicio no disponible), `bookSort.spec.js`
+  (reglas por columna, vacíos y empates) y `BookTable.spec.js` (clic,
+  `aria-sort` e íconos).
 - E2E: `tests/e2e/app-menu.spec.js` (menú, navegación, reabrir el escáner
-  dos veces seguidas, logout y encabezado fijo con 40 libros). Se actualizaron los E2E de estadísticas, escáner,
+  dos veces seguidas, logout y encabezado fijo con 40 libros) y
+  `tests/e2e/table-sorting.spec.js` (orden por título, año y estado, y orden
+  conservado al cambiar de vista). Se actualizaron los E2E de estadísticas, escáner,
   formatos y recomendaciones para navegar por el menú.
 - Revisión visual con Chrome a 1280, 430, 375 y 320 px de ancho. A 320 px el
   nombre se corta con «…», pero la barra queda en una línea.

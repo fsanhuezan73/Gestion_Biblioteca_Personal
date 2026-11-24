@@ -160,7 +160,7 @@
         </div>
 
         <div v-else class="card shadow-sm">
-          <BookTable :books="booksStore.books" />
+          <BookTable v-model:sort="tableSort" :books="booksStore.books" />
         </div>
       </div>
     </div>
@@ -190,6 +190,8 @@ const filterFormats = ref([])
 const withoutFormat = ref(false)
 const showFilters = ref(false)
 const viewMode = ref('grid')
+// Orden de la tabla: se mantiene al cambiar entre «Cuadrícula» y «Tabla».
+const tableSort = ref(null)
 const undatedOnly = ref(route.query.sin_fecha === '1')
 const currentGoal = computed(() => statsStore.stats?.year_stats.goal ?? null)
 

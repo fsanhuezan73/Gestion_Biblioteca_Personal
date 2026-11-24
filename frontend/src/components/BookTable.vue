@@ -4,20 +4,30 @@
     <table class="table table-hover align-middle mb-0">
       <thead class="table-light book-table-head">
         <tr>
-          <th style="width: 56px"></th>
-          <th>Título</th>
-          <th>Autor</th>
-          <th>Género</th>
-          <th>Año</th>
-          <th class="d-none d-xl-table-cell">ISBN</th>
-          <th>Estado</th>
-          <th>Lectura</th>
-          <th>Valoración</th>
+          <th style="width: 56px"><span class="visually-hidden">Portada</span></th>
+          <th
+            v-for="column in columns"
+            :key="column.key"
+            :class="column.class"
+            :aria-sort="ariaSort(column.key)"
+          >
+            <button
+              type="button"
+              class="sort-button"
+              :class="{ active: sort?.key === column.key }"
+              :data-test="`sort-${column.key}`"
+              :title="`Ordenar por ${column.label}`"
+              @click="emit('update:sort', nextSort(sort, column.key))"
+            >
+              {{ column.label }}
+              <span class="sort-icon" aria-hidden="true">{{ sortIcon(column.key) }}</span>
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr
-          v-for="book in books"
+          v-for="book in sortedBooks"
           :key="book.id"
           class="book-row"
           role="button"
@@ -65,12 +75,35 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import BookRating from './BookRating.vue'
 import { readingSummary } from '@/utils/dates'
+import { SORT_COLUMNS, nextSort, sortBooks } from '@/utils/bookSort'
 
-defineProps({
+const props = defineProps({
   books: { type: Array, required: true },
+  // { key, direction: 'asc' | 'desc' } o null (orden recibido de la API).
+  sort: { type: Object, default: null },
 })
+const emit = defineEmits(['update:sort'])
+
+const columns = Object.entries(SORT_COLUMNS).map(([key, { label }]) => ({
+  key,
+  label,
+  class: key === 'isbn' ? 'd-none d-xl-table-cell' : '',
+}))
+
+const sortedBooks = computed(() => sortBooks(props.books, props.sort?.key, props.sort?.direction))
+
+function ariaSort(key) {
+  if (props.sort?.key !== key) return 'none'
+  return props.sort.direction === 'desc' ? 'descending' : 'ascending'
+}
+
+function sortIcon(key) {
+  if (props.sort?.key !== key) return '↕'
+  return props.sort.direction === 'desc' ? '▼' : '▲'
+}
 
 function statusClass(status) {
   switch (status) {
@@ -92,6 +125,38 @@ function statusClass(status) {
   top: 0;
   z-index: 2;
   box-shadow: inset 0 -1px 0 var(--border);
+  white-space: nowrap;
+}
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sort-button:hover,
+.sort-button:focus-visible {
+  color: var(--brand);
+}
+.sort-button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+.sort-icon {
+  font-size: 0.7rem;
+  opacity: 0.35;
+}
+.sort-button.active {
+  color: var(--brand-dark);
+}
+.sort-button.active .sort-icon {
+  opacity: 1;
 }
 .book-row {
   transition: background-color 0.15s ease;

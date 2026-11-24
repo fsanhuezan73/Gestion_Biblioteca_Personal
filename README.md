@@ -264,8 +264,9 @@ Con la sesión iniciada, todas las páginas muestran una barra con el botón **�
 en la esquina superior izquierda y **Cerrar sesión** a la derecha. El menú abre
 Mi colección, Para ti, Estadísticas, Escanear libro, Añadir libro y Mi cuenta.
 La página inicial (`/library`) muestra solo la colección. En la vista **Tabla**,
-la fila de encabezados queda fija al hacer scroll. Ver
-[validación del menú](docs/menu-navegacion.md).
+la fila de encabezados queda fija al hacer scroll y un clic en un encabezado
+ordena por esa columna (ascendente / descendente). Ver
+[validación del menú y la tabla](docs/coleccion-navegacion.md).
 
 ## Estadísticas y metas de lectura
 
