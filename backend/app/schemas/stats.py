@@ -74,6 +74,13 @@ class YearStats(BaseModel):
     goal: Optional[GoalProgress] = None
 
 
+class FormatCounts(BaseModel):
+    physical: int = 0
+    kindle: int = 0
+    apple_books: int = 0
+    without_format: int = 0
+
+
 class LibraryStats(BaseModel):
     total_books: int
     want_to_read: int
@@ -84,6 +91,7 @@ class LibraryStats(BaseModel):
     rated_books: int
     ratings: List[RatingCount]
     genres: List[LabelCount]
+    formats: FormatCounts
     currently_reading: List[CurrentlyReading]
 
 

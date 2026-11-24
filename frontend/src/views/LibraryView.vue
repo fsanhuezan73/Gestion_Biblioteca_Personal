@@ -115,6 +115,31 @@
                 <option value="Leído">✅ Leído</option>
               </select>
             </div>
+            <fieldset class="col-12">
+              <legend class="form-label small text-muted mb-1">Formato</legend>
+              <div class="d-flex flex-wrap column-gap-3 row-gap-1">
+                <label v-for="{ code, label } in BOOK_FORMATS" :key="code" class="form-check small mb-0">
+                  <input
+                    v-model="filterFormats"
+                    type="checkbox"
+                    class="form-check-input"
+                    :value="code"
+                    @change="onFormatsChanged"
+                  />
+                  <span class="form-check-label">{{ label }}</span>
+                </label>
+                <label class="form-check small mb-0">
+                  <input
+                    v-model="withoutFormat"
+                    type="checkbox"
+                    class="form-check-input"
+                    @change="onWithoutFormatChanged"
+                  />
+                  <span class="form-check-label">{{ WITHOUT_FORMAT_LABEL }}</span>
+                </label>
+              </div>
+              <p class="form-text mb-0">Se muestran los libros que tienen todos los formatos seleccionados.</p>
+            </fieldset>
           </div>
         </div>
       </div>
@@ -182,6 +207,7 @@ import BookTable from '@/components/BookTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import RecommendationsSection from '@/components/RecommendationsSection.vue'
 import { useStatsStore } from '@/stores/stats'
+import { BOOK_FORMATS, WITHOUT_FORMAT_LABEL } from '@/utils/bookFormats'
 
 const router = useRouter()
 const route = useRoute()
@@ -193,6 +219,8 @@ const toastMessage = ref(route.query.success || '')
 const searchQuery = ref('')
 const filterGenre = ref('')
 const filterStatus = ref('')
+const filterFormats = ref([])
+const withoutFormat = ref(false)
 const showFilters = ref(false)
 const viewMode = ref('grid')
 const undatedOnly = ref(route.query.sin_fecha === '1')
@@ -200,8 +228,9 @@ const currentGoal = computed(() => statsStore.stats?.year_stats.goal ?? null)
 
 let searchTimeout = null
 
-const hasActiveFilters = computed(() => filterGenre.value !== '' || filterStatus.value !== '')
-const activeFilterCount = computed(() => (filterGenre.value ? 1 : 0) + (filterStatus.value ? 1 : 0))
+const hasFormatFilter = computed(() => filterFormats.value.length > 0 || withoutFormat.value)
+const activeFilterCount = computed(() => [filterGenre.value, filterStatus.value, hasFormatFilter.value].filter(Boolean).length)
+const hasActiveFilters = computed(() => activeFilterCount.value > 0)
 const hasActiveSearch = computed(
   () => searchQuery.value.trim() !== '' || hasActiveFilters.value || undatedOnly.value,
 )
@@ -218,12 +247,24 @@ function buildParams() {
   if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
   if (filterGenre.value) params.genre = filterGenre.value
   if (filterStatus.value) params.reading_status = filterStatus.value
+  if (filterFormats.value.length) params.format = filterFormats.value
+  if (withoutFormat.value) params.without_format = true
   if (undatedOnly.value) params.without_finish_date = true
   return params
 }
 
 function applyFilters() {
   booksStore.fetchBooks(buildParams())
+}
+
+function onFormatsChanged() {
+  if (filterFormats.value.length) withoutFormat.value = false
+  applyFilters()
+}
+
+function onWithoutFormatChanged() {
+  if (withoutFormat.value) filterFormats.value = []
+  applyFilters()
 }
 
 function debouncedSearch() {
@@ -237,6 +278,8 @@ function clearAll() {
   searchQuery.value = ''
   filterGenre.value = ''
   filterStatus.value = ''
+  filterFormats.value = []
+  withoutFormat.value = false
   if (undatedOnly.value) {
     undatedOnly.value = false
     router.replace({ name: 'Library' })
@@ -246,6 +289,7 @@ function clearAll() {
 
 function onRecommendationAdded(book) {
   toastMessage.value = `«${book.title}» se agregó a Quiero leer.`
+  if (hasFormatFilter.value) applyFilters()
 }
 
 function handleLogout() {

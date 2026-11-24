@@ -70,7 +70,7 @@ describe('BookForm · fechas y páginas', () => {
 })
 
 describe('BookForm · escáner', () => {
-  it('al escanear completa el ISBN, busca en Open Library y avisa si ya existe', async () => {
+  it('al escanear autocompleta el libro, avisa si existe y conserva sus formatos', async () => {
     const { default: api } = await import('@/utils/api')
     const { flushPromises } = await import('@vue/test-utils')
     vi.spyOn(api, 'get').mockImplementation(async (url) => (url === '/books/check-isbn'
@@ -84,6 +84,8 @@ describe('BookForm · escáner', () => {
       props: { allowScan: true },
       global: { stubs: { RouterLink: { template: '<a><slot /></a>' }, BarcodeScanner: { template: '<div data-test="scanner" />', emits: ['detected'] } } },
     })
+    await wrapper.get('input[value="physical"]').setValue(true)
+    await wrapper.get('input[value="kindle"]').setValue(true)
     expect(wrapper.find('[data-test="open-scanner"]').exists()).toBe(true)
     await wrapper.find('[data-test="open-scanner"]').trigger('click')
     await flushPromises()
@@ -96,6 +98,8 @@ describe('BookForm · escáner', () => {
     expect(wrapper.find('[data-test="duplicate-alert"]').text()).toContain('1984')
     expect(api.get).toHaveBeenCalledWith('/books/lookup', { params: { isbn: '9780451524935' } })
     expect(wrapper.text()).toContain('Datos de Open Library + Google Books')
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.emitted('submit')[0][0].formats).toEqual(['physical', 'kindle'])
   })
 
   it('ISBN inválido no consulta la API', async () => {
