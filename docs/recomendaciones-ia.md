@@ -128,6 +128,25 @@ producción.
    resultado: si el servidor alcanzó a terminar, las recomendaciones aparecen
    igual.
 
+## Prueba local contra BIBLIOTECA_PERSONAL (producción)
+
+`./start-personal.sh` levanta el backend en el puerto 8002 contra
+`BIBLIOTECA_PERSONAL` (`backend/.env`) y el frontend en el 5175. Sirve para
+probar el código nuevo con tus datos reales antes de mergear a `main`.
+
+- Antes de arrancar pide escribir `PERSONAL`. El script de Python, además, se
+  niega a usar producción sin `--confirm-production` y comprueba que
+  `ORACLE_USER` sea `BIBLIOTECA_PERSONAL`.
+- **Todo cambio es real:** agregar o valorar libros, «Agregar a Quiero leer» y
+  cada generación, que cuenta para el límite diario de tu cuenta, el mismo que
+  usará el sitio en producción.
+- Inicia sesión con tu cuenta real. Las claves de IA y de Google Books se leen
+  de `backend/.env.ai` y `backend/.env.googlebooks`, igual que en la prueba con
+  TEST.
+- La migración 009 ya está aplicada en `BIBLIOTECA_PERSONAL`. El backend de
+  Render (código anterior) ignora la tabla nueva, así que ambos conviven sin
+  problemas.
+
 ### Diagnóstico del 23-11-2026
 
 Una primera prueba local mostró «La solicitud tardó demasiado», aunque el

@@ -330,7 +330,8 @@ cada uno con motivo y sinopsis, y permite agregarlos a «Quiero leer».
   `AI_GEMINI_MODEL`, `AI_GROQ_MODEL`, `AI_DAILY_LIMIT`, `AI_MIN_RATED_BOOKS`.
   En local, las claves van en `backend/.env.ai` (ignorado por Git).
 - Prueba local contra `BIBLIOTECA_TEST`: `./start-test.sh` (frontend en
-  http://localhost:5174). Ver [detalle, validación y prueba local](docs/recomendaciones-ia.md).
+  http://localhost:5174). Con tus datos reales (`BIBLIOTECA_PERSONAL`, pide
+  confirmación): `./start-personal.sh` (frontend en http://localhost:5175). Ver [detalle, validación y prueba local](docs/recomendaciones-ia.md).
 
 ## Portadas subidas por el usuario
 
