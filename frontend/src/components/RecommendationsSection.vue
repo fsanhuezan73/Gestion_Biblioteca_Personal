@@ -113,8 +113,10 @@ const generatedText = computed(() => {
   return new Date(value).toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' })
 })
 
+// Siempre se consulta al abrir la biblioteca: las valoraciones y el cupo diario
+// pudieron cambiar desde la última vez (se muestra lo anterior mientras tanto).
 onMounted(() => {
-  if (!store.data) store.fetchLatest()
+  store.fetchLatest()
 })
 
 function key(book) {

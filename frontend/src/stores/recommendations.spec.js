@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import api from '@/utils/api'
 import { GENERATE_TIMEOUT_MS, useRecommendationsStore } from './recommendations'
 import { useBooksStore } from './books'
+import { useAuthStore } from './auth'
 
 const result = (overrides = {}) => ({
   recommendations: [{ title: 'Aura', authors: ['Carlos Fuentes'], reason: 'r', isbn: '9780000000002', in_library: false }],
@@ -88,6 +90,46 @@ describe('recomendaciones', () => {
     const store = useRecommendationsStore()
     await store.generate()
     expect(store.error).toContain(text)
+  })
+
+  it('al cerrar sesión descarta las recomendaciones del usuario anterior', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token-a'
+    const store = useRecommendationsStore()
+    store.data = result()
+    store.error = 'algo'
+    auth.logout()
+    await nextTick()
+    expect(store.data).toBeNull()
+    expect(store.items).toEqual([])
+    expect(store.error).toBe('')
+  })
+
+  it('ignora una respuesta que llega después de cambiar de sesión', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token-a'
+    let resolve
+    vi.spyOn(api, 'get').mockReturnValue(new Promise((r) => { resolve = r }))
+    const store = useRecommendationsStore()
+    const pending = store.fetchLatest()
+    auth.token = 'token-b'
+    resolve({ data: result() })
+    await pending
+    expect(store.data).toBeNull()
+  })
+
+  it('no muestra una generación que termina después de cerrar sesión', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token-a'
+    let resolve
+    vi.spyOn(api, 'post').mockReturnValue(new Promise((r) => { resolve = r }))
+    const store = useRecommendationsStore()
+    const pending = store.generate()
+    auth.logout()
+    resolve({ data: result() })
+    await pending
+    expect(store.data).toBeNull()
+    expect(store.generating).toBe(false)
   })
 
   it('agrega a Quiero leer con los datos verificados', async () => {

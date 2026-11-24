@@ -291,6 +291,44 @@ def test_get_accepts_result_already_decoded_by_oracledb(api):
     assert [b["title"] for b in data["recommendations"]] == ["Aura"]
 
 
+def test_get_reads_lob_before_releasing_connection():
+    """Un LOB solo se puede leer con la conexión abierta (hallazgo de revisión)."""
+    stored = json.dumps([{"title": "Aura", "authors": ["Carlos Fuentes"], "reason": "r"}])
+    state = {"open": False}
+
+    class FakeLob:
+        def read(self):
+            if not state["open"]:
+                raise RuntimeError("DPY-1001: not connected to database")
+            return stored
+
+    cursor = MagicMock()
+    cursor.fetchall.return_value = LIBRARY_ROWS
+    cursor.fetchone.return_value = (FakeLob(), "gemini", "m", datetime(2026, 11, 23, 15), 1, datetime(2026, 11, 23))
+    conn = MagicMock()
+    conn.cursor.return_value = cursor
+
+    @contextmanager
+    def connection():
+        state["open"] = True
+        try:
+            yield conn
+        finally:
+            state["open"] = False
+
+    with patch("app.main.init_db_pool"), patch("app.main.close_db_pool"), patch(
+        "app.api.v1.endpoints.ai.get_db_connection", side_effect=connection
+    ), patch("app.api.v1.endpoints.ai.today", return_value=TODAY):
+        app.dependency_overrides[get_current_user] = lambda: 42
+        try:
+            with TestClient(app) as client:
+                response = client.get("/api/v1/ai/recommendations")
+        finally:
+            app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert [b["title"] for b in response.json()["recommendations"]] == ["Aura"]
+
+
 def test_get_without_previous_result(api):
     client, cursor, _, _ = api
     cursor.fetchall.return_value = LIBRARY_ROWS[:1]

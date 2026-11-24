@@ -87,7 +87,12 @@ def _load_state(cursor, user_id: int):
 def _read_all(user_id: int):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        return _load_library(cursor, user_id), _load_state(cursor, user_id)
+        library = _load_library(cursor, user_id)
+        state = _load_state(cursor, user_id)
+        # El CLOB puede llegar como LOB: se lee antes de devolver la conexión al pool.
+        if state and hasattr(state[0], "read"):
+            state = (state[0].read(), *state[1:])
+        return library, state
 
 
 def _save_result(user_id: int, result_json: str, provider: str, model: str, day, limit: int, retry: bool = True):

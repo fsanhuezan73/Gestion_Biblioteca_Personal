@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import api from '@/utils/api'
+import { useAuthStore } from '@/stores/auth'
 import { useBooksStore } from '@/stores/books'
 
 // La IA y la verificación en catálogos, más el arranque en frío de Render, pueden
@@ -28,14 +29,30 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
   const adding = ref({})
 
   const items = computed(() => data.value?.recommendations ?? [])
+
+  function reset() {
+    data.value = null
+    error.value = ''
+    unavailable.value = false
+    adding.value = {}
+  }
+
+  // Las recomendaciones son personales: al cerrar sesión o entrar con otra
+  // cuenta (sin recargar la página) se descartan las del usuario anterior.
+  const authStore = useAuthStore()
+  watch(() => authStore.token, reset)
+
   const enoughRatedBooks = computed(() => !!data.value && data.value.rated_books >= data.value.min_rated_books)
   const canGenerate = computed(
     () => enoughRatedBooks.value && data.value.remaining_today > 0 && !generating.value,
   )
 
   async function fetchLatest() {
+    const token = authStore.token
     try {
       const { data: result } = await api.get('/ai/recommendations')
+      // Respuesta de una sesión anterior: no se muestra.
+      if (authStore.token !== token) return
       data.value = result
       unavailable.value = false
     } catch {
@@ -48,10 +65,12 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     generating.value = true
     error.value = ''
     const previousGeneratedAt = data.value?.generated_at ?? null
+    const token = authStore.token
     try {
       const { data: result } = await api.post('/ai/recommendations', null, { timeout: GENERATE_TIMEOUT_MS })
-      data.value = result
+      if (authStore.token === token) data.value = result
     } catch (err) {
+      if (authStore.token !== token) return
       error.value = errorMessage(err)
       // Se refresca el contador y el último resultado: tras un timeout del navegador,
       // el servidor pudo terminar igual y guardar recomendaciones nuevas.
@@ -95,6 +114,6 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
 
   return {
     data, generating, error, unavailable, items, enoughRatedBooks, canGenerate,
-    fetchLatest, generate, addToWantToRead, isAdding,
+    fetchLatest, generate, addToWantToRead, isAdding, reset,
   }
 })

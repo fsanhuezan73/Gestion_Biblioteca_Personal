@@ -72,6 +72,21 @@ describe('RecommendationsSection', () => {
     expect(wrapper.findAll('[data-test="in-library"]')).toHaveLength(2)
   })
 
+  it('vuelve a consultar al abrir la biblioteca aunque ya tenga datos', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ data: result({ rated_books: 1, recommendations: [] }) })
+    const first = mount(RecommendationsSection)
+    await flushPromises()
+    expect(first.find('[data-test="not-enough"]').exists()).toBe(true)
+    first.unmount()
+    // El usuario valoró más libros y vuelve a la biblioteca.
+    get.mockResolvedValue({ data: result({ rated_books: 3 }) })
+    const second = mount(RecommendationsSection)
+    await flushPromises()
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(second.find('[data-test="not-enough"]').exists()).toBe(false)
+    expect(second.find('[data-test="generate-recommendations"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('se oculta si la API no responde', async () => {
     vi.spyOn(api, 'get').mockRejectedValue(new Error('offline'))
     const wrapper = mount(RecommendationsSection)
