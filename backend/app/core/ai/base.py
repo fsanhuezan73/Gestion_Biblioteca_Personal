@@ -4,8 +4,9 @@ from typing import Protocol
 
 import httpx
 
-# 30 s por solicitud al proveedor; la conexión debe abrirse antes.
-TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+# Por solicitud al proveedor. El orquestador además limita el tiempo total
+# (AI_TOTAL_BUDGET_SECONDS) para responder antes del timeout del navegador (90 s).
+TIMEOUT = httpx.Timeout(25.0, connect=8.0)
 
 
 class AIProviderError(Exception):

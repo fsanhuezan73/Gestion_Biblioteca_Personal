@@ -109,3 +109,14 @@ def test_clean_synopsis_limits_length():
     assert clean_synopsis("a &amp; b<br>c") == "a & b\nc"
     long_text = clean_synopsis("palabra " * 400)
     assert len(long_text) <= 1200 and long_text.endswith("…")
+
+
+def test_slow_candidate_is_dropped_by_budget(monkeypatch):
+    async def fake_find(client, title, author, key):
+        if title == "Lento":
+            await asyncio.sleep(5)
+        return {"title": title, "authors": [author], "source": "google_books"}
+
+    monkeypatch.setattr(book_search, "find_book", fake_find)
+    results = run(verify_candidates([("Rápido", "A"), ("Lento", "B")], KEY, budget_seconds=0.2))
+    assert results[0]["title"] == "Rápido" and results[1] is None

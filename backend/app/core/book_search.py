@@ -14,7 +14,7 @@ from collections import OrderedDict
 
 import httpx
 
-from app.core.book_lookup import TIMEOUT, USER_AGENT, _year
+from app.core.book_lookup import USER_AGENT, _year
 from app.core.isbn import to_isbn13
 from app.core.recommendations import authors_match, normalize_text, titles_match
 
@@ -25,6 +25,9 @@ OPEN_LIBRARY = "openlibrary"
 MAX_SYNOPSIS_LENGTH = 1200
 CACHE_TTL_SECONDS = 6 * 60 * 60
 CACHE_MAX_ENTRIES = 512
+# Tiempo por solicitud y máximo por candidato (Google y luego Open Library).
+TIMEOUT = httpx.Timeout(6.0, connect=4.0)
+VERIFY_BUDGET_SECONDS = 12.0
 
 _cache: "OrderedDict[tuple[str, str], tuple[float, dict | None]]" = OrderedDict()
 
@@ -151,16 +154,24 @@ async def verify_candidates(
     candidates: list[tuple[str, str]],
     google_api_key: str,
     transport: httpx.AsyncBaseTransport | None = None,
+    budget_seconds: float = VERIFY_BUDGET_SECONDS,
 ) -> list[dict | None]:
-    """Verifica en paralelo; mantiene el orden y usa None para los no encontrados."""
+    """Verifica en paralelo; mantiene el orden y usa None para los no encontrados.
+
+    Un candidato que no termina dentro de budget_seconds se descarta (None).
+    """
     async with httpx.AsyncClient(
         timeout=TIMEOUT, headers={"User-Agent": USER_AGENT}, follow_redirects=True, transport=transport,
     ) as client:
         results = await asyncio.gather(
-            *(find_book(client, title, author, google_api_key) for title, author in candidates),
+            *(asyncio.wait_for(find_book(client, title, author, google_api_key), budget_seconds)
+              for title, author in candidates),
             return_exceptions=True,
         )
-    return [None if isinstance(r, Exception) else r for r in results]
+    timeouts = sum(isinstance(r, asyncio.TimeoutError) for r in results)
+    if timeouts:
+        logger.warning("Verificación: %d candidatos excedieron %.0f s", timeouts, budget_seconds)
+    return [None if isinstance(r, BaseException) else r for r in results]
 
 
 def clear_cache() -> None:

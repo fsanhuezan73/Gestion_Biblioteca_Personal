@@ -47,13 +47,19 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
   async function generate() {
     generating.value = true
     error.value = ''
+    const previousGeneratedAt = data.value?.generated_at ?? null
     try {
       const { data: result } = await api.post('/ai/recommendations', null, { timeout: GENERATE_TIMEOUT_MS })
       data.value = result
     } catch (err) {
       error.value = errorMessage(err)
-      // Al llegar al límite se refresca el contador y se conserva el último resultado.
-      if (err.response?.status === 429) await fetchLatest()
+      // Se refresca el contador y el último resultado: tras un timeout del navegador,
+      // el servidor pudo terminar igual y guardar recomendaciones nuevas.
+      if (err.response?.status !== 422) {
+        await fetchLatest()
+        const arrived = data.value?.generated_at && data.value.generated_at !== previousGeneratedAt
+        if (arrived && err.response?.status !== 429) error.value = ''
+      }
     } finally {
       generating.value = false
     }

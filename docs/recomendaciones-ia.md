@@ -15,13 +15,16 @@ La Fase 2 (resúmenes) queda fuera de alcance.
    autor, género y estrellas.
 4. Pide 8 candidatos en JSON con esquema (`title`, `author`, `reason`) al primer
    proveedor de `AI_PROVIDER_ORDER`:
-   - Un error HTTP (incluido el 429 por cuota), un timeout de 30 s o una
-     respuesta vacía pasa al siguiente proveedor.
+   - Un error HTTP (incluido el 429 o 503 por cuota o saturación), un timeout o
+     una respuesta vacía pasa al siguiente proveedor.
    - Un JSON inválido se reintenta una vez con el mismo proveedor.
+   - Presupuesto total de 45 s para la IA. Cada intento deja 15 s reservados
+     para cada proveedor de respaldo pendiente.
    - Si todos fallan, responde 503 y no cuenta para el límite.
 5. Descarta los candidatos que ya están en la biblioteca (título y apellido del
    autor normalizados, contra **todos** los libros activos) y verifica el resto en
-   paralelo (`app/core/book_search.py`):
+   paralelo, con 12 s como máximo por candidato (`app/core/book_search.py`).
+   Así el POST responde en menos de ~60 s, bajo el timeout de 90 s del frontend:
    - Google Books: `intitle:"…" inauthor:"…"`, con descripción e ISBN.
    - Open Library: `search.json?title=&author=`, si Google no encuentra el
      libro, falla o no hay clave.
@@ -115,10 +118,24 @@ producción.
 3. Abrir http://localhost:5174 y crear una cuenta de prueba en «Registrarse». La
    cuenta queda en `BIBLIOTECA_TEST`.
 4. Agregar al menos 3 libros con estado «Leído» y asignarles estrellas.
-5. Pulsar «Recomiéndame qué leer». La primera respuesta puede tardar entre 10 y
-   30 s. En la terminal, el log
-   `Recomendaciones: <proveedor> propuso N, M verificadas` indica qué proveedor
-   respondió.
+5. Pulsar «Recomiéndame qué leer». Lo normal es que tarde entre 3 y 10 s. En la
+   terminal, el log
+   `Recomendaciones: <proveedor> propuso N, M verificadas (IA x s, total y s)`
+   indica qué proveedor respondió y cuánto tardó. Una línea
+   `Proveedor de IA falló: gemini: HTTP 503` indica que Gemini estaba saturado y
+   respondió Groq.
+6. Si el navegador corta la espera, la sección vuelve a consultar el último
+   resultado: si el servidor alcanzó a terminar, las recomendaciones aparecen
+   igual.
+
+### Diagnóstico del 23-11-2026
+
+Una primera prueba local mostró «La solicitud tardó demasiado», aunque el
+servidor terminó y guardó el resultado después de los 90 s del navegador. Cada
+etapa medida por separado fue rápida (IA 2–5 s, verificación ~1,5 s), pero el
+diseño original permitía, en el peor caso, más de 90 s (30 s por intento de IA,
+con reintento y respaldo). Por eso se agregó el presupuesto total de tiempo, los
+logs con tiempos y la recarga del resultado tras un error.
 
 ### Pendiente para producción
 

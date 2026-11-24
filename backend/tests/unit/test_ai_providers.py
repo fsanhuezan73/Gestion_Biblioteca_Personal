@@ -173,3 +173,29 @@ def test_error_messages_never_include_keys(caplog):
     with pytest.raises(AllProvidersFailed):
         run(generate_candidates(providers(), PROFILE, transport))
     assert GEMINI_KEY not in caplog.text and GROQ_KEY not in caplog.text
+
+
+# --- Presupuesto de tiempo ------------------------------------------------------
+
+class FakeProvider:
+    def __init__(self, name, delay, text=None):
+        self.name, self.model, self.delay, self.text, self.calls = name, f"{name}-model", delay, text, 0
+
+    async def generate(self, client, system, user):
+        self.calls += 1
+        await asyncio.sleep(self.delay)
+        return self.text or payload()
+
+
+def test_slow_provider_is_cut_by_budget_and_falls_back():
+    slow, fast = FakeProvider("gemini", 5), FakeProvider("groq", 0)
+    # 6,6 s en total con 3,3 s de reserva: Gemini se corta a los 3,3 s y a Groq le quedan 3,3 s.
+    result = run(generate_candidates([slow, fast], PROFILE, budget_seconds=6.6, reserve_seconds=3.3))
+    assert result.provider == "groq" and slow.calls == 1
+
+
+def test_no_time_left_for_next_provider_raises():
+    slow, fast = FakeProvider("gemini", 5), FakeProvider("groq", 0)
+    with pytest.raises(AllProvidersFailed):
+        run(generate_candidates([slow, fast], PROFILE, budget_seconds=1))
+    assert fast.calls == 0

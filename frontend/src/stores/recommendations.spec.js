@@ -60,6 +60,26 @@ describe('recomendaciones', () => {
     expect(store.data.remaining_today).toBe(0)
   })
 
+  it('tras un timeout muestra el resultado si el servidor alcanzó a guardarlo', async () => {
+    vi.spyOn(api, 'post').mockRejectedValue(Object.assign(new Error('timeout'), { code: 'ECONNABORTED' }))
+    vi.spyOn(api, 'get').mockResolvedValue({ data: result({ generated_at: '2026-11-23T16:00:00Z', remaining_today: 3 }) })
+    const store = useRecommendationsStore()
+    store.data = result({ recommendations: [], generated_at: null })
+    await store.generate()
+    expect(store.error).toBe('')
+    expect(store.items).toHaveLength(1)
+    expect(store.data.remaining_today).toBe(3)
+  })
+
+  it('tras un timeout sin resultado nuevo mantiene el aviso', async () => {
+    vi.spyOn(api, 'post').mockRejectedValue(Object.assign(new Error('timeout'), { code: 'ECONNABORTED' }))
+    vi.spyOn(api, 'get').mockResolvedValue({ data: result() })
+    const store = useRecommendationsStore()
+    store.data = result()
+    await store.generate()
+    expect(store.error).toContain('tardó demasiado')
+  })
+
   it.each([
     [httpError(503), 'no está disponible'],
     [Object.assign(new Error('timeout'), { code: 'ECONNABORTED' }), 'tardó demasiado'],

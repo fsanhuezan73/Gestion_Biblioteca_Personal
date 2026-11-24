@@ -7,6 +7,7 @@ verifica en Google Books u Open Library antes de mostrarse.
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 
 import httpx
@@ -208,6 +209,7 @@ async def get_recommendations(current_user_id: int = Depends(get_current_user)):
 async def create_recommendations(current_user_id: int = Depends(get_current_user)):
     settings = get_settings()
     day = today()
+    started = time.monotonic()
     library, state = await run_in_threadpool(_read_all, current_user_id)
 
     rated = len(rated_read_books(library))
@@ -231,6 +233,7 @@ async def create_recommendations(current_user_id: int = Depends(get_current_user
             detail="El servicio de recomendaciones no está disponible ahora. Intenta más tarde.",
         )
 
+    ai_seconds = time.monotonic() - started
     candidates = [c for c in ai.candidates if not in_library(c.title, [c.author], library)]
     verified = await verify_candidates(
         [(c.title, c.author) for c in candidates], settings.google_books_api_key, http_transport,
@@ -248,7 +251,8 @@ async def create_recommendations(current_user_id: int = Depends(get_current_user
         if len(books) == MAX_RECOMMENDATIONS:
             break
     logger.info(
-        "Recomendaciones: %s propuso %d, %d verificadas", ai.provider, len(ai.candidates), len(books),
+        "Recomendaciones: %s propuso %d, %d verificadas (IA %.1f s, total %.1f s)",
+        ai.provider, len(ai.candidates), len(books), ai_seconds, time.monotonic() - started,
     )
     if not books:
         # No cuenta para el límite diario: no hubo una generación útil.
